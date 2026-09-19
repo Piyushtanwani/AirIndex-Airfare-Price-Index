@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+airindex.db
+
+# Environment
+.env
+.env.local
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Playwright
+playwright-report/
+test-results/
+
+docs/

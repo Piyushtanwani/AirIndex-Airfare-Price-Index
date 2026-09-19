@@ -1,0 +1,81 @@
+# AirIndex methodology configuration.
+#
+# Everything the index engine needs in order to turn observed fares into a published
+# number. This file is served verbatim by GET /v1/methodology, so the dashboard and the
+# published method cannot disagree.
+#
+# Changing any value here is a methodology change. Bump `methodology_version` when you
+# do, because every stored index value records the version it was computed under.
+
+methodology_version: "apix-1.0.0"
+
+index_type: "Weighted Jevons (geometric mean of price relatives)"
+formula: "APIx_t = 100 * exp( SUM_i w_i * ln(P_i_t / P_i_0) / SUM_i w_i )"
+formula_explanation: >
+  The elementary aggregate is a geometric mean of price relatives, which is the formula
+  the ILO/IMF Consumer Price Index Manual (2020) prescribes for elementary aggregates
+  without expenditure weights, and the one the UK Office for National Statistics applies
+  to web-scraped prices. It is deliberately not a bespoke formula: a statistical office
+  cannot adopt a method it has to take on faith.
+
+# What is being priced.
+price_basis: "total_fare"
+price_basis_explanation: >
+  The index tracks the total fare, meaning base fare plus taxes plus statutory fees plus
+  any convenience charge, because that is what the household actually pays. Components
+  are stored separately so a base-fare-only index can be produced without recollection.
+
+price_statistic: "minimum_logical_fare"
+price_statistic_explanation: >
+  For each cell on each day the index uses the cheapest valid total fare observed, across
+  all airlines and departure times. This is the price a traveller could actually have
+  transacted at, and it is the statistic least sensitive to which flights a portal happens
+  to display first.
+
+# The basket.
+lead_times: [1, 7, 15, 30, 45]
+lead_time_label_prefix: "T+"
+
+# Base period. The index is 100 over the mean of the first three consecutive days that
+# each clear the publication threshold. A single-day base is fragile: one promotional
+# fare in it inflates every later relative.
+base_period_days: 3
+base_period_start: null   # set automatically on first successful computation
+
+# Quality thresholds.
+min_obs_per_cell: 3
+min_obs_explanation: >
+  A cell with fewer than this many valid observations on a day does not have its relative
+  recomputed. It carries forward the last published relative and is flagged as imputed.
+
+mad_threshold: 3.5
+mad_explanation: >
+  Outliers are removed per cell with a median absolute deviation rule. A fare whose
+  modified z-score exceeds this threshold is excluded from that day's cell. The rule is
+  applied to the logarithm of the fare, because fare distributions are right-skewed.
+
+coverage_threshold: 0.60
+coverage_explanation: >
+  An index value is published only when at least this share of cells in the basket have
+  fresh, non-imputed data for the day. Below the threshold the value is withheld rather
+  than published on thin data.
+
+max_plausible_fare_inr: 100000
+min_plausible_fare_inr: 500
+max_lead_time_days: 60
+
+# Publication.
+publication_cadence: "daily"
+publication_time_ist: "03:00"
+revisions_policy: >
+  Values computed before the day's collection completes are marked provisional and may be
+  revised once. A published value is revised only when a data-quality defect is found in
+  its inputs, and every revision keeps a pointer to the value it replaced. The methodology
+  version under which each value was computed is stored with it and never rewritten.
+
+known_limitations:
+  - "Weights are a declared scheduled-seat proxy, not official DGCA passenger volumes."
+  - "The basket covers fifteen city pairs and is not a complete census of domestic routes."
+  - "Only economy cabin one-way fares are priced. Return and premium cabins are out of scope."
+  - "Ancillary charges chosen at booking, such as seats and baggage, are not included."
+  - "The synthetic source is for demonstration and its values are not real market prices."

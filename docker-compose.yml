@@ -1,0 +1,79 @@
+# AirIndex, running as four containers.
+#
+#   docker compose up --build
+#   docker compose exec api python cli.py demo --days 90
+#
+# Then the dashboard is at http://localhost:5173 and the API documentation at
+# http://localhost:8000/docs
+#
+# The collector runs as its own service rather than inside the API process. A scheduler
+# living inside a web server is a surprise, and it means the two cannot be scaled or
+# restarted independently.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: airindex
+      POSTGRES_PASSWORD: airindex
+      POSTGRES_DB: airindex
+    ports:
+      - "5432:5432"
+    volumes:
+      - airindex-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airindex -d airindex"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://airindex:airindex@db:5432/airindex
+      ENVIRONMENT: development
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      SCHEDULER_ENABLED: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  collector:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://airindex:airindex@db:5432/airindex
+      ENVIRONMENT: development
+      SCHEDULER_ENABLED: "true"
+      COLLECTOR_ENABLED_SOURCES: synthetic
+      # Live portal adapters stay off here too. Enabling them is a deliberate act that
+      # requires the Terms of Service review in docs/compliance.md.
+      COLLECTOR_LIVE_ADAPTERS_ENABLED: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python -m collector.scheduler
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  airindex-db:

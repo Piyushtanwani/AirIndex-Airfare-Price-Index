@@ -1,0 +1,6 @@
+# Optional dependencies for the live portal adapters (phase 8).
+# These are NOT needed for the synthetic or licensed-feed demonstration path.
+#   pip install -r requirements-scrapers.txt
+#   playwright install chromium
+playwright==1.49.1
+selectolax==0.3.27

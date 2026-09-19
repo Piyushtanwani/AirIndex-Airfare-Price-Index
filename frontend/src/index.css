@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------- */
+/* Design tokens                                                          */
+/* ---------------------------------------------------------------------- */
+
+:root {
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --content-max: 1240px;
+  --content-gutter: 16px;
+
+  /* Light theme (default) — restrained slate palette, with a touch of depth
+     so raised cards separate cleanly from the page background. */
+  --color-surface: #ffffff;
+  --color-surface-alt: #eef0f3;
+  --color-surface-raised: #ffffff;
+  --color-border: #dde1e6;
+  --color-text: #14181f;
+  --color-text-muted: #5b6472;
+
+  --color-accent: #0f5c58;
+  --color-accent-muted: #e3f0ef;
+  --color-on-accent: #ffffff;
+
+  /* Soft, low-opacity elevation. Used in place of leaning solely on borders. */
+  --shadow-sm: 0 1px 2px rgba(20, 24, 31, 0.05), 0 1px 1px rgba(20, 24, 31, 0.04);
+  --shadow-md: 0 4px 10px rgba(20, 24, 31, 0.06), 0 2px 4px rgba(20, 24, 31, 0.05);
+  --shadow-lg: 0 12px 28px rgba(20, 24, 31, 0.09), 0 4px 10px rgba(20, 24, 31, 0.06);
+
+  /* Semantics for a PRICE index: a RISE in the index is bad news for
+     consumers (fares more expensive) so it takes the WARM colour; a FALL
+     is good news for consumers and takes the COOL colour. */
+  --color-rise: #b4530a;
+  --color-fall: #146c43;
+  --color-warn: #a4210a;
+
+  /* RGB channel triplets so Tailwind's rgb(var(--x) / <alpha-value>) opacity
+     modifiers (e.g. bg-warn/10) work against CSS-variable colours. */
+  --color-accent-rgb: 15 92 88;
+  --color-rise-rgb: 180 83 10;
+  --color-fall-rgb: 20 108 67;
+  --color-warn-rgb: 164 33 10;
+  --color-border-rgb: 221 225 230;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-surface: #10131a;
+    --color-surface-alt: #0b0d12;
+    --color-surface-raised: #1a1f28;
+    --color-border: #2c323c;
+    --color-text: #e7eaee;
+    --color-text-muted: #9aa4b2;
+
+    --color-accent: #4fd3c9;
+    --color-accent-muted: #163533;
+    --color-on-accent: #0a2320;
+
+    --color-rise: #e3924a;
+    --color-fall: #4ec987;
+    --color-warn: #f0664a;
+
+    --color-accent-rgb: 79 211 201;
+    --color-rise-rgb: 227 146 74;
+    --color-fall-rgb: 78 201 135;
+    --color-warn-rgb: 240 102 74;
+    --color-border-rgb: 44 50 60;
+
+    /* Shadows barely read on dark surfaces; lean on the raised surface
+       colour and a hairline border instead, kept here only for depth cues
+       behind large overlays. */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.45);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-surface: #10131a;
+  --color-surface-alt: #0b0d12;
+  --color-surface-raised: #1a1f28;
+  --color-border: #2c323c;
+  --color-text: #e7eaee;
+  --color-text-muted: #9aa4b2;
+
+  --color-accent: #4fd3c9;
+  --color-accent-muted: #163533;
+  --color-on-accent: #0a2320;
+
+  --color-rise: #e3924a;
+  --color-fall: #4ec987;
+  --color-warn: #f0664a;
+
+  --color-accent-rgb: 79 211 201;
+  --color-rise-rgb: 227 146 74;
+  --color-fall-rgb: 78 201 135;
+  --color-warn-rgb: 240 102 74;
+  --color-border-rgb: 44 50 60;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.45);
+
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.011em;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Native form controls pick up the accent colour without per-page edits. */
+input,
+select,
+textarea {
+  accent-color: var(--color-accent);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+input[type='range'] {
+  height: 4px;
+}
+
+/* Content column shared by every page's <main>. */
+.page-container {
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--content-gutter);
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .page-container {
+    --content-gutter: 24px;
+  }
+}
+
+/* Hide scrollbars on elements that still need to scroll (capsule nav). */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

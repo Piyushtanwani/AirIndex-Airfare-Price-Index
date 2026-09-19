@@ -1,0 +1,58 @@
+# AirIndex index weights.
+#
+# READ THIS BEFORE CHANGING ANYTHING HERE.
+#
+# The problem statement asks for weighting by route passenger volume. The authoritative
+# source for that in India is the DGCA monthly domestic city-pair traffic release. This
+# file is the single place where weights enter the index, and the index engine will not
+# accept weights from anywhere else.
+#
+# STATUS OF THE NUMBERS BELOW: they are a DECLARED PROXY, not official DGCA figures.
+# They are derived from published scheduled-seat capacity on each city pair and are
+# stated as such everywhere the index is published. They are here so the pipeline is
+# runnable end to end. Replacing them with the real DGCA series is a data task, not a
+# code change: overwrite `raw_share` below, set `source` and `asof`, and rerun
+# `airindex recompute`.
+#
+# Rule: never invent a weight. If a route has no sourced share, leave it out of the
+# basket rather than guessing.
+
+version: 1
+source: "Scheduled-seat capacity share, stated proxy for DGCA city-pair passenger volume"
+source_url: "https://www.dgca.gov.in/digigov-portal/?page=jsp/dgca/InventoryList/dataReports/aviationDataStatistics/"
+asof: "2026-07-01"
+official: false
+proxy_note: >
+  Scheduled-seat capacity is used as a proxy for realised passenger volume because the
+  DGCA city-pair passenger series is published with a lag and not in a machine-readable
+  form. Load factors differ by route, so this proxy overstates the weight of routes with
+  below-average load factors. The direction and size of that bias is documented in
+  docs/methodology.md.
+
+# Raw shares need not sum to one. The engine normalises them over the active basket.
+route_shares:
+  DEL-BOM: 0.1180
+  BOM-DEL: 0.1165
+  BLR-DEL: 0.0985
+  DEL-BLR: 0.0975
+  BLR-BOM: 0.0720
+  DEL-CCU: 0.0640
+  DEL-HYD: 0.0615
+  BOM-BLR: 0.0710
+  DEL-MAA: 0.0560
+  BOM-GOI: 0.0380
+  DEL-GOI: 0.0345
+  AMD-DEL: 0.0430
+  CCU-BLR: 0.0355
+  HYD-BOM: 0.0520
+  PNQ-DEL: 0.0420
+
+# Lead-time weights. These represent the share of bookings made at each booking window.
+# Source: booking-curve distribution reported in the IIM Ahmedabad price-movement study
+# cited in docs/methodology.md, bucketed to the five windows in the basket. Also a proxy.
+lead_time_weights:
+  1: 0.10
+  7: 0.20
+  15: 0.30
+  30: 0.25
+  45: 0.15

@@ -1,0 +1,186 @@
+# AirIndex route basket.
+#
+# The basket is the set of city pairs priced by the index. Fifteen routes across
+# five booking lead times gives 75 priced cells.
+#
+# `weight` is the route's share of the index. See weights.yaml for the source and
+# the caveat that applies to it. The weights here are the normalised values used at
+# runtime and are regenerated from weights.yaml by `airindex weights-sync`.
+#
+# `base_fare_inr` and the shape parameters are used ONLY by the synthetic source to
+# generate plausible fares. They have no effect on the index when a real source is used.
+
+version: 1
+updated: 2026-09-19
+
+routes:
+  - code: DEL-BOM
+    origin: DEL
+    destination: BOM
+    origin_city: Delhi
+    dest_city: Mumbai
+    active: true
+    distance_km: 1148
+    airlines: [6E, AI, QP, SG]
+    base_fare_inr: 5200
+    volatility: 0.16
+
+  - code: BOM-DEL
+    origin: BOM
+    destination: DEL
+    origin_city: Mumbai
+    dest_city: Delhi
+    active: true
+    distance_km: 1148
+    airlines: [6E, AI, QP, SG]
+    base_fare_inr: 5100
+    volatility: 0.16
+
+  - code: BLR-DEL
+    origin: BLR
+    destination: DEL
+    origin_city: Bengaluru
+    dest_city: Delhi
+    active: true
+    distance_km: 1740
+    airlines: [6E, AI, QP, SG]
+    base_fare_inr: 6100
+    volatility: 0.18
+
+  - code: DEL-BLR
+    origin: DEL
+    destination: BLR
+    origin_city: Delhi
+    dest_city: Bengaluru
+    active: true
+    distance_km: 1740
+    airlines: [6E, AI, QP, SG]
+    base_fare_inr: 6050
+    volatility: 0.18
+
+  - code: BLR-BOM
+    origin: BLR
+    destination: BOM
+    origin_city: Bengaluru
+    dest_city: Mumbai
+    active: true
+    distance_km: 842
+    airlines: [6E, AI, QP]
+    base_fare_inr: 4300
+    volatility: 0.15
+
+  - code: DEL-CCU
+    origin: DEL
+    destination: CCU
+    origin_city: Delhi
+    dest_city: Kolkata
+    active: true
+    distance_km: 1305
+    airlines: [6E, AI, SG]
+    base_fare_inr: 5400
+    volatility: 0.17
+
+  - code: DEL-HYD
+    origin: DEL
+    destination: HYD
+    origin_city: Delhi
+    dest_city: Hyderabad
+    active: true
+    distance_km: 1268
+    airlines: [6E, AI, QP]
+    base_fare_inr: 5300
+    volatility: 0.16
+
+  - code: BOM-BLR
+    origin: BOM
+    destination: BLR
+    origin_city: Mumbai
+    dest_city: Bengaluru
+    active: true
+    distance_km: 842
+    airlines: [6E, AI, QP]
+    base_fare_inr: 4250
+    volatility: 0.15
+
+  - code: DEL-MAA
+    origin: DEL
+    destination: MAA
+    origin_city: Delhi
+    dest_city: Chennai
+    active: true
+    distance_km: 1760
+    airlines: [6E, AI, SG]
+    base_fare_inr: 6200
+    volatility: 0.18
+
+  - code: BOM-GOI
+    origin: BOM
+    destination: GOI
+    origin_city: Mumbai
+    dest_city: Goa
+    active: true
+    distance_km: 431
+    airlines: [6E, AI, QP]
+    base_fare_inr: 3400
+    volatility: 0.22
+
+  - code: DEL-GOI
+    origin: DEL
+    destination: GOI
+    origin_city: Delhi
+    dest_city: Goa
+    active: true
+    distance_km: 1524
+    airlines: [6E, QP, SG]
+    base_fare_inr: 5900
+    volatility: 0.21
+
+  - code: AMD-DEL
+    origin: AMD
+    destination: DEL
+    origin_city: Ahmedabad
+    dest_city: Delhi
+    active: true
+    distance_km: 776
+    airlines: [6E, AI]
+    base_fare_inr: 4100
+    volatility: 0.15
+
+  - code: CCU-BLR
+    origin: CCU
+    destination: BLR
+    origin_city: Kolkata
+    dest_city: Bengaluru
+    active: true
+    distance_km: 1561
+    airlines: [6E, QP]
+    base_fare_inr: 5700
+    volatility: 0.17
+
+  - code: HYD-BOM
+    origin: HYD
+    destination: BOM
+    origin_city: Hyderabad
+    dest_city: Mumbai
+    active: true
+    distance_km: 623
+    airlines: [6E, AI]
+    base_fare_inr: 3900
+    volatility: 0.15
+
+  - code: PNQ-DEL
+    origin: PNQ
+    destination: DEL
+    origin_city: Pune
+    dest_city: Delhi
+    active: true
+    distance_km: 1173
+    airlines: [6E, AI, SG]
+    base_fare_inr: 5000
+    volatility: 0.16
+
+airlines:
+  6E: IndiGo
+  AI: Air India
+  QP: Akasa Air
+  SG: SpiceJet

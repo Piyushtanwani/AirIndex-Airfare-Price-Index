@@ -1,0 +1,72 @@
+# Policy simulation parameters.
+#
+# EVERY NUMBER IN THIS FILE IS AN ASSUMPTION, NOT A MEASUREMENT.
+#
+# The scenario simulator multiplies these together. That makes the file the single place
+# where a reader can audit what the simulator believes, and it makes every scenario
+# result only as good as the values here. The API returns this file alongside every
+# simulation for exactly that reason.
+#
+# None of these are estimated from AirIndex data. Estimating them would need a longer
+# series, fuel price data, capacity data and a published CPI airfare series to fit
+# against. Until that exists, these are stated priors drawn from the cited literature and
+# they are labelled as such wherever they appear.
+
+version: 1
+updated: 2026-09-19
+official: false
+
+cpi:
+  # The share of the Consumer Price Index basket that air fares represent.
+  #
+  # PLACEHOLDER. The authoritative value is in the CPI weighting diagram published by
+  # MoSPI with the 2012-base series, under transport and communication. It is not
+  # reproduced here because it must be taken from the official document rather than
+  # from memory, and a wrong weight would silently scale every CPI transmission result.
+  #
+  # Replace `airfare_weight_pct` with the official figure and set `weight_is_official`
+  # to true. The simulator refuses to describe its output as a CPI impact while this is
+  # false; it reports an illustrative transmission instead.
+  airfare_weight_pct: 0.18
+  weight_is_official: false
+  weight_source: "Placeholder pending the official MoSPI CPI weighting diagram"
+  basket_note: >
+    A weight of roughly one fifth of one per cent means even a large airfare move is a
+    small CPI move. Any scenario that shows air fares driving headline inflation has an
+    error in it, and the simulator says so when the result looks implausible.
+
+fuel:
+  # Aviation turbine fuel as a share of airline operating cost, and how much of a fuel
+  # price change reaches the fare.
+  atf_cost_share: 0.38
+  atf_cost_share_source: "Published Indian carrier cost structures, order of magnitude"
+  # Pass-through: the share of a fuel cost change that appears in fares, in the long run.
+  pass_through: 0.55
+  pass_through_source: "Stated prior. Airline pass-through is incomplete and lagged."
+  # Lag in days before the full pass-through is reached. Applied as a linear ramp.
+  pass_through_lag_days: 45
+
+demand:
+  # Own-price elasticity of demand for domestic air travel. Used both by the scenario
+  # simulator and by the alternative index formulas when they model quantities.
+  own_price_elasticity: 1.2
+  elasticity_source: >
+    Flight-level price elasticity estimates for Indian domestic routes, cited in the
+    team reference list. A single national figure hides wide variation between leisure
+    and business routes.
+  # How much a demand shift moves fares, given a fixed schedule in the short run.
+  demand_to_fare: 0.45
+
+capacity:
+  # How much a change in seats offered moves fares, holding demand fixed.
+  capacity_to_fare: -0.60
+  capacity_source: "Stated prior. Consistent with the sign and rough size in the literature."
+
+bounds:
+  # Scenarios outside these ranges are refused rather than extrapolated. A simulator that
+  # will answer any question is a simulator that will answer a meaningless one.
+  max_airfare_shock_pct: 50.0
+  max_atf_shock_pct: 60.0
+  max_demand_shock_pct: 40.0
+  max_capacity_shock_pct: 30.0
+  max_horizon_days: 180
