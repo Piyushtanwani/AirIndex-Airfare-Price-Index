@@ -43,7 +43,9 @@ export default function Methodology() {
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-text-muted">Base period</dt>
                 <dd className="tabular-nums text-sm text-text">
-                  {query.data.base_period.start} to {query.data.base_period.end} = {query.data.base_period.value.toFixed(1)}
+                  {query.data.base_period.start && query.data.base_period.end
+                    ? `${query.data.base_period.start} to ${query.data.base_period.end} = ${query.data.base_period.value.toFixed(1)}`
+                    : 'Not yet established'}
                 </dd>
               </div>
               <div>

@@ -19,9 +19,46 @@ from __future__ import annotations
 import datetime as dt
 import logging
 
+import click
 import typer
+import typer.core
 from rich.console import Console
 from rich.table import Table
+
+# Compatibility bridge for Click >= 8.5 and Typer make_metavar parameter changes
+_orig_param_make_metavar = click.core.Parameter.make_metavar
+
+
+def _patched_param_make_metavar(self, ctx=None):
+    try:
+        return _orig_param_make_metavar(self, ctx)
+    except TypeError:
+        return _orig_param_make_metavar(self)
+
+
+click.core.Parameter.make_metavar = _patched_param_make_metavar
+
+if hasattr(typer.core, "TyperArgument"):
+    _orig_arg_make_metavar = typer.core.TyperArgument.make_metavar
+
+    def _patched_arg_make_metavar(self, *args, **kwargs):
+        try:
+            return _orig_arg_make_metavar(self)
+        except TypeError:
+            return _orig_arg_make_metavar(self, *args, **kwargs)
+
+    typer.core.TyperArgument.make_metavar = _patched_arg_make_metavar
+
+if hasattr(typer.core, "TyperOption"):
+    _orig_opt_make_metavar = typer.core.TyperOption.make_metavar
+
+    def _patched_opt_make_metavar(self, *args, **kwargs):
+        try:
+            return _orig_opt_make_metavar(self)
+        except TypeError:
+            return _orig_opt_make_metavar(self, *args, **kwargs)
+
+    typer.core.TyperOption.make_metavar = _patched_opt_make_metavar
 
 from app.core.config import get_methodology_config, get_settings
 from app.db.session import drop_db, init_db, session_scope
@@ -140,13 +177,16 @@ def process() -> None:
 @app.command("recompute")
 def recompute(
     since_days: int = typer.Option(None, help="Only rebuild cells from the last N days"),
+    rebuild_fares: bool = typer.Option(
+        False, "--rebuild-fares", help="Rebuild the fare layer from raw observations first"
+    ),
 ) -> None:
     """Run the full pipeline: process, rebuild cells, recompute the index."""
     from engine.pipeline import run_full_pipeline
 
     since = dt.date.today() - dt.timedelta(days=since_days) if since_days else None
     with session_scope() as session:
-        report = run_full_pipeline(session, since=since)
+        report = run_full_pipeline(session, since=since, rebuild=rebuild_fares)
     _print_report(report)
 
 

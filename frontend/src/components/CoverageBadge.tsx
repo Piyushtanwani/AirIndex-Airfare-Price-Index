@@ -1,8 +1,9 @@
 interface CoverageBadgeProps {
-  coverage: number
+  coverage: number | null | undefined
 }
 
 export function CoverageBadge({ coverage }: CoverageBadgeProps) {
+  if (coverage === null || coverage === undefined || Number.isNaN(coverage)) return null
   const pct = coverage * 100
   const tone = pct >= 90 ? 'text-fall bg-fall/10' : pct >= 60 ? 'text-rise bg-rise/10' : 'text-warn bg-warn/10'
   return (

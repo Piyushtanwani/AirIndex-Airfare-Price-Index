@@ -43,7 +43,10 @@ export default function Quality() {
             <StatTile label="Duplicates rejected" value={formatIndianNumber(query.data.totals.duplicates_rejected)} />
             <StatTile label="Outliers excluded" value={formatIndianNumber(query.data.totals.outliers_excluded)} />
             <StatTile label="Imputed cells" value={formatIndianNumber(query.data.totals.imputed_cells)} />
-            <StatTile label="Latest coverage" value={`${(query.data.totals.coverage_latest * 100).toFixed(0)}%`} />
+            <StatTile
+              label="Latest coverage"
+              value={query.data.totals.coverage_latest != null ? `${(query.data.totals.coverage_latest * 100).toFixed(0)}%` : '—'}
+            />
           </div>
 
           <ChartCard title="Daily valid vs invalid observations" description={`Trailing ${query.data.window_days} days.`}>

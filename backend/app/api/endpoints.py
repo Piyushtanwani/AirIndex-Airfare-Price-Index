@@ -13,9 +13,9 @@ import datetime as dt
 import io
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import Integer, func, select
 from sqlalchemy.orm import Session
 
 from app import __version__
@@ -413,8 +413,6 @@ def get_contributions(
     Jevons index the decomposition is exact in log space, so this is an attribution
     rather than an approximation.
     """
-    import pandas as pd
-
     as_of = date or latest_index_date(session)
     if as_of is None:
         raise HTTPException(404, "No index values have been published yet")
@@ -473,7 +471,7 @@ def get_contributions(
 
     rows: list[schemas.ContributionRow] = []
     if not frame.empty:
-        rows = [schemas.ContributionRow(**row) for row in frame.to_dict(orient="records")]
+        rows = [schemas.ContributionRow.model_validate(row) for row in frame.to_dict(orient="records")]
 
     return schemas.ContributionResponse(
         date=as_of, previous_date=previous, apix_change_pct=change, rows=rows
@@ -643,7 +641,7 @@ def quality_summary(
         select(
             Fare.observation_date,
             func.count(Fare.id),
-            func.sum(func.cast(Fare.is_valid, __import__("sqlalchemy").Integer)),
+            func.sum(func.cast(Fare.is_valid, Integer)),
         ).where(Fare.observation_date >= since).group_by(Fare.observation_date)
         .order_by(Fare.observation_date)
     ).all()
@@ -834,7 +832,9 @@ def recompute(
         latest = pipeline_mod.latest_observation_date(session)
         if latest:
             since = latest - dt.timedelta(days=body.days)
-    report = pipeline_mod.run_full_pipeline(session, since=since)
+    report = pipeline_mod.run_full_pipeline(
+        session, since=since, rebuild=body.reprocess
+    )
     session.commit()
     payload: dict[str, Any] = report.as_dict()
     return schemas.RecomputeResponse(

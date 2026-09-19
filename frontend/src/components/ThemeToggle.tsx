@@ -4,7 +4,6 @@ import { applyTheme, getStoredTheme, storeTheme, type ThemeChoice } from '../lib
 const OPTIONS: { value: ThemeChoice; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
 ]
 
 export function ThemeToggle() {

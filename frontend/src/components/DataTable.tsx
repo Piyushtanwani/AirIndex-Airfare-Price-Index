@@ -3,7 +3,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 export interface DataTableColumn<T> {
   key: string
   header: string
-  accessor: (row: T) => string | number
+  accessor: (row: T) => string | number | null | undefined
   render?: (row: T) => ReactNode
   sortable?: boolean
   align?: 'left' | 'right'
@@ -41,6 +41,9 @@ export function DataTable<T>({
     copy.sort((a, b) => {
       const av = column.accessor(a)
       const bv = column.accessor(b)
+      if (av == null && bv == null) return 0
+      if (av == null) return sortDir === 'asc' ? 1 : -1
+      if (bv == null) return sortDir === 'asc' ? -1 : 1
       if (typeof av === 'number' && typeof bv === 'number') {
         return sortDir === 'asc' ? av - bv : bv - av
       }

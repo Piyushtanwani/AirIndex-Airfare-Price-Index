@@ -30,7 +30,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-MODEL = "claude-opus-5"
+MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
 
 SYSTEM_PROMPT = """\
 You are the analyst interface to AirIndex, a real-time airfare price index for India built
@@ -284,8 +284,6 @@ def answer_with_model(question: str, evidence: Evidence) -> tuple[str, list[str]
         model=MODEL,
         max_tokens=1024,
         system=SYSTEM_PROMPT,
-        thinking={"type": "adaptive"},
-        output_config={"effort": "low"},
         messages=[{"role": "user", "content": message}],
     )
 

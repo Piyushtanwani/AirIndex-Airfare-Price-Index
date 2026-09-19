@@ -6,19 +6,23 @@ const inrFormatter = new Intl.NumberFormat('en-IN', {
 
 const inrNumberFormatter = new Intl.NumberFormat('en-IN')
 
-export function formatInr(value: number): string {
+export function formatInr(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
   return inrFormatter.format(value)
 }
 
-export function formatIndianNumber(value: number): string {
+export function formatIndianNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
   return inrNumberFormatter.format(value)
 }
 
-export function formatIndex(value: number): string {
+export function formatIndex(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
   return value.toFixed(1)
 }
 
-export function formatPercent(value: number): string {
+export function formatPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
   const sign = value > 0 ? '+' : value < 0 ? '' : '±'
   return `${sign}${value.toFixed(1)}%`
 }

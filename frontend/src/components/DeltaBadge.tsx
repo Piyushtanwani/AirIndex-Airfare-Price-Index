@@ -1,7 +1,7 @@
 import { formatPercent } from '../lib/format'
 
 interface DeltaBadgeProps {
-  value: number
+  value: number | null | undefined
   label?: string
 }
 
@@ -10,6 +10,9 @@ interface DeltaBadgeProps {
 // consumers, shown in the cool "fall" colour. This is called out in the
 // accessible label so the meaning is never ambiguous from colour alone.
 export function DeltaBadge({ value, label }: DeltaBadgeProps) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return <span className="tabular-nums text-text-muted">—</span>
+  }
   const isRise = value > 0
   const isFall = value < 0
   const colorClass = isRise ? 'text-rise bg-rise/10' : isFall ? 'text-fall bg-fall/10' : 'text-text-muted bg-surface-alt'

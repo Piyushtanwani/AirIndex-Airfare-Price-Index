@@ -70,12 +70,14 @@ export default function Trust() {
           <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-text-muted">Overall trust score</p>
             <div className="mt-2 flex flex-wrap items-baseline gap-3">
-              <p className="tabular-nums text-5xl font-semibold text-text">{query.data.overall.toFixed(0)}</p>
+              <p className="tabular-nums text-5xl font-semibold text-text">
+                {query.data.overall != null ? query.data.overall.toFixed(0) : '—'}
+              </p>
               <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-sm font-medium ${bandTone(query.data.band)}`}>
                 {query.data.band}
               </span>
             </div>
-            <p className="mt-2 text-xs text-text-muted">As of {query.data.as_of}</p>
+            <p className="mt-2 text-xs text-text-muted">As of {query.data.as_of ?? '—'}</p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

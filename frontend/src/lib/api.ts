@@ -37,7 +37,7 @@ export interface MethodologyResponse {
   index_type: string
   formula: string
   price_basis: string
-  base_period: { start: string; end: string; value: number }
+  base_period: { start: string | null; end: string | null; value: number }
   lead_times: number[]
   lead_time_weights: Record<string, number>
   min_obs_per_cell: number
@@ -71,12 +71,12 @@ export interface RouteItem {
   active: boolean
   weight: number
   weight_source: string
-  weight_asof: string
-  latest_apix: number
-  wow_pct: number
-  mom_pct: number
+  weight_asof: string | null
+  latest_apix: number | null
+  wow_pct: number | null
+  mom_pct: number | null
   obs_30d: number
-  coverage: number
+  coverage: number | null
 }
 
 export interface RoutesResponse {
@@ -115,9 +115,9 @@ export interface TopMover {
 }
 
 export interface IndexLatestResponse {
-  as_of: string
+  as_of: string | null
   methodology_version: string
-  item: IndexPoint
+  item: IndexPoint | null
   top_movers: TopMover[]
 }
 
@@ -192,7 +192,7 @@ export interface QualityDaily {
 }
 
 export interface QualitySummaryResponse {
-  as_of: string
+  as_of: string | null
   window_days: number
   totals: {
     raw_observations: number
@@ -202,7 +202,7 @@ export interface QualitySummaryResponse {
     duplicates_rejected: number
     outliers_excluded: number
     imputed_cells: number
-    coverage_latest: number
+    coverage_latest: number | null
   }
   flags: QualityFlag[]
   sources: QualitySource[]
@@ -231,7 +231,7 @@ export interface FormulasResponse {
   comparison_date: string
   methodology_version: string
   quantity_mode: QuantityMode
-  elasticity: number
+  elasticity: number | null
   headline: string
   spread: number
   results: FormulaResult[]
@@ -246,9 +246,9 @@ export interface TrustComponent {
 }
 
 export interface TrustResponse {
-  overall: number
+  overall: number | null
   band: string
-  as_of: string
+  as_of: string | null
   components: TrustComponent[]
   warnings: string[]
 }
@@ -339,7 +339,7 @@ export interface ScenarioResponse {
   assumptions: ScenarioAssumptions
   channels: ScenarioChannel[]
   total_fare_effect_pct: number
-  cpi_effect_pp: number
+  cpi_effect_pp: number | null
   cpi_effect_is_official: boolean
   path: ScenarioPathPoint[]
   sensitivity: ScenarioSensitivity[]

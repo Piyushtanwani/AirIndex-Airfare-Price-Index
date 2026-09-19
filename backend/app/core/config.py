@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -32,10 +33,29 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
 
+    # Database individual fields or full DATABASE_URL
+    db_host: str | None = None
+    db_port: int | None = None
+    db_name: str | None = None
+    db_user: str | None = None
+    db_password: str | None = None
+
     # SQLite by default so the project runs with no external service. Point this at
     # PostgreSQL for anything beyond a laptop demonstration:
     #   postgresql+psycopg://airindex:airindex@localhost:5432/airindex
     database_url: str = f"sqlite:///{(REPO_DIR / 'airindex.db').as_posix()}"
+
+    @model_validator(mode="after")
+    def assemble_database_url(self) -> Settings:
+        # If DB_* variables are provided, construct the postgresql database_url
+        if self.db_host and self.db_user and self.db_name:
+            user = self.db_user
+            password = f":{self.db_password}" if self.db_password else ""
+            port = f":{self.db_port}" if self.db_port else ":5432"
+            self.database_url = (
+                f"postgresql+psycopg://{user}{password}@{self.db_host}{port}/{self.db_name}"
+            )
+        return self
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000

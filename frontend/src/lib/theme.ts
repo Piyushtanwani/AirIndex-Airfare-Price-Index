@@ -1,15 +1,15 @@
-export type ThemeChoice = 'light' | 'dark' | 'system'
+export type ThemeChoice = 'light' | 'dark'
 
 const STORAGE_KEY = 'airindex-theme'
 
 export function getStoredTheme(): ThemeChoice {
   try {
     const value = localStorage.getItem(STORAGE_KEY)
-    if (value === 'light' || value === 'dark' || value === 'system') return value
+    if (value === 'light' || value === 'dark') return value
   } catch {
     // localStorage unavailable; fall back silently
   }
-  return 'system'
+  return 'light'
 }
 
 export function storeTheme(theme: ThemeChoice): void {
@@ -22,9 +22,5 @@ export function storeTheme(theme: ThemeChoice): void {
 
 export function applyTheme(theme: ThemeChoice): void {
   const root = document.documentElement
-  if (theme === 'system') {
-    root.removeAttribute('data-theme')
-  } else {
-    root.setAttribute('data-theme', theme)
-  }
+  root.setAttribute('data-theme', theme)
 }

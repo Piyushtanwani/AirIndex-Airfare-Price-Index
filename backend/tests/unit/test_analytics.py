@@ -283,3 +283,21 @@ class TestAnomalies:
     def test_short_series_returns_nothing(self):
         dates = [dt.date(2026, 1, 1) + dt.timedelta(days=i) for i in range(5)]
         assert scenario_mod.detect_series_anomalies(dates, [100.0] * 5) == []
+
+
+class TestAnalyst:
+    def test_deterministic_answering_without_model(self):
+        from engine import analyst as analyst_mod
+
+        evidence = analyst_mod.Evidence()
+        evidence.add("latest_index", {"date": "2026-09-19", "apix": 105.5, "coverage": 1.0})
+        ans = analyst_mod.answer("What is the airfare index today?", evidence, prefer_model=False)
+        assert ans.mode == "deterministic"
+        assert "105.5" in ans.answer
+
+    def test_analyst_model_name_is_valid(self):
+        from engine import analyst as analyst_mod
+
+        assert "claude" in analyst_mod.MODEL
+        assert analyst_mod.MODEL != "claude-opus-5"
+

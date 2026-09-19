@@ -28,7 +28,7 @@ export default function Overview() {
           <LoadingSkeleton rows={2} height={72} label="Loading headline index" />
         ) : latestQuery.isError ? (
           <ErrorState error={latestQuery.error} onRetry={() => latestQuery.refetch()} />
-        ) : !latestQuery.data ? (
+        ) : !latestQuery.data || !latestQuery.data.item ? (
           <EmptyState title="No index value published" />
         ) : (
           <div className="rounded-lg border border-border bg-surface p-6 shadow-sm sm:p-8">

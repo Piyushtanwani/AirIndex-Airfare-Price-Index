@@ -118,7 +118,7 @@ export default function Formulas() {
             <StatTile label="Headline (Jevons)" value={query.data.headline} sublabel="The published APIx methodology." />
             <StatTile
               label="Elasticity assumption"
-              value={query.data.elasticity.toFixed(2)}
+              value={query.data.elasticity != null ? query.data.elasticity.toFixed(2) : '—'}
               sublabel={`Comparison ${query.data.comparison_date} → ${query.data.date}`}
             />
           </div>

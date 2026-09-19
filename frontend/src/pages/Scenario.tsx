@@ -165,11 +165,15 @@ export default function Scenario() {
             <StatTile
               label="CPI effect"
               value={
-                <span>
-                  {data.cpi_effect_pp > 0 ? '+' : ''}
-                  {data.cpi_effect_pp.toFixed(5)} pp
-                  {!data.cpi_effect_is_official ? <IllustrativeMarker /> : null}
-                </span>
+                data.cpi_effect_pp != null ? (
+                  <span>
+                    {data.cpi_effect_pp > 0 ? '+' : ''}
+                    {data.cpi_effect_pp.toFixed(5)} pp
+                    {!data.cpi_effect_is_official ? <IllustrativeMarker /> : null}
+                  </span>
+                ) : (
+                  '—'
+                )
               }
               sublabel="Percentage-point contribution to CPI, given the configured airfare weight."
             />
