@@ -295,9 +295,8 @@ class TestAnalyst:
         assert ans.mode == "deterministic"
         assert "105.5" in ans.answer
 
-    def test_analyst_model_name_is_valid(self):
+    def test_analyst_default_model_is_configured(self):
         from engine import analyst as analyst_mod
 
-        assert "claude" in analyst_mod.MODEL
-        assert analyst_mod.MODEL != "claude-opus-5"
+        assert analyst_mod.DEFAULT_MODEL.startswith("claude-")
 

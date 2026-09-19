@@ -10,6 +10,7 @@ from __future__ import annotations
 import functools
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote_plus
 
 import yaml
 from pydantic import model_validator
@@ -43,18 +44,28 @@ class Settings(BaseSettings):
     # SQLite by default so the project runs with no external service. Point this at
     # PostgreSQL for anything beyond a laptop demonstration:
     #   postgresql+psycopg://airindex:airindex@localhost:5432/airindex
-    database_url: str = f"sqlite:///{(REPO_DIR / 'airindex.db').as_posix()}"
+    # Left unset so that DB_* variables can supply the URL instead. The SQLite
+    # default is applied below, only when neither source provided one.
+    database_url: str | None = None
 
     @model_validator(mode="after")
     def assemble_database_url(self) -> Settings:
-        # If DB_* variables are provided, construct the postgresql database_url
+        """Derive the URL from DB_* parts only when DATABASE_URL was not supplied.
+
+        An explicit DATABASE_URL always wins: an operator who sets it means it.
+        """
+        if self.database_url:
+            return self
         if self.db_host and self.db_user and self.db_name:
-            user = self.db_user
-            password = f":{self.db_password}" if self.db_password else ""
-            port = f":{self.db_port}" if self.db_port else ":5432"
+            credentials = quote_plus(self.db_user)
+            if self.db_password:
+                credentials = f"{credentials}:{quote_plus(self.db_password)}"
+            port = self.db_port or 5432
             self.database_url = (
-                f"postgresql+psycopg://{user}{password}@{self.db_host}{port}/{self.db_name}"
+                f"postgresql+psycopg://{credentials}@{self.db_host}:{port}/{self.db_name}"
             )
+        else:
+            self.database_url = f"sqlite:///{(REPO_DIR / 'airindex.db').as_posix()}"
         return self
 
     api_host: str = "0.0.0.0"
@@ -85,6 +96,10 @@ class Settings(BaseSettings):
 
     synthetic_seed: int = 26056
 
+    # Model-backed analyst. Without a key the analyst stays on its deterministic path.
+    anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-opus-5"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -99,7 +114,7 @@ class Settings(BaseSettings):
 
     @property
     def is_sqlite(self) -> bool:
-        return self.database_url.startswith("sqlite")
+        return bool(self.database_url and self.database_url.startswith("sqlite"))
 
 
 @functools.lru_cache

@@ -25,12 +25,13 @@ rather than the fallback.
 from __future__ import annotations
 
 import datetime as dt
-import os
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
-MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+from app.core.config import get_settings
+
+DEFAULT_MODEL = "claude-opus-5"
 
 SYSTEM_PROMPT = """\
 You are the analyst interface to AirIndex, a real-time airfare price index for India built
@@ -259,7 +260,9 @@ def answer_with_model(question: str, evidence: Evidence) -> tuple[str, list[str]
     Raises RuntimeError when the SDK or key is unavailable, so the caller falls back to
     the deterministic path rather than returning nothing.
     """
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    settings = get_settings()
+    api_key = settings.anthropic_api_key
+    model = settings.anthropic_model or DEFAULT_MODEL
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY is not set")
 
@@ -281,7 +284,7 @@ def answer_with_model(question: str, evidence: Evidence) -> tuple[str, list[str]
     )
 
     response = client.messages.create(
-        model=MODEL,
+        model=model,
         max_tokens=1024,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": message}],
@@ -294,7 +297,7 @@ def answer_with_model(question: str, evidence: Evidence) -> tuple[str, list[str]
     if not text:
         raise RuntimeError("The model returned no text.")
 
-    notes.append(f"Answered by {MODEL} from the evidence block, which is returned with this reply.")
+    notes.append(f"Answered by {model} from the evidence block, which is returned with this reply.")
     return text, notes
 
 
@@ -316,7 +319,7 @@ def answer(question: str, evidence: Evidence, *, prefer_model: bool = True) -> A
             evidence=evidence.sections,
         )
 
-    if prefer_model and os.getenv("ANTHROPIC_API_KEY"):
+    if prefer_model and get_settings().anthropic_api_key:
         try:
             text, notes = answer_with_model(question, evidence)
             return AnalystAnswer(
