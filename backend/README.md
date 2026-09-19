@@ -196,7 +196,10 @@ rewritten.
 | `API_KEY_REQUIRED` | `false` | Read endpoints open in development. Admin always needs a key |
 | `ADMIN_API_KEY` | a refused placeholder | Change before deploying |
 | `SCHEDULER_ENABLED` | `false` | The collector belongs in its own process |
-| `ANTHROPIC_API_KEY` | unset | Optional. Only affects how the analyst phrases answers |
+| `GEMINI_API_KEY` | unset | Optional. Enables Gemini model-backed analyst phrasing |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Model used when `GEMINI_API_KEY` is provided |
+| `ANTHROPIC_API_KEY` | unset | Optional. Enables Anthropic Claude model-backed analyst phrasing |
+| `ANALYST_PROVIDER` | `auto` | `auto`, `gemini`, or `anthropic` |
 
 ---
 

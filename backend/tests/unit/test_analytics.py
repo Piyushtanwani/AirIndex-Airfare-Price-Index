@@ -299,4 +299,54 @@ class TestAnalyst:
         from engine import analyst as analyst_mod
 
         assert analyst_mod.DEFAULT_MODEL.startswith("claude-")
+        assert analyst_mod.DEFAULT_GEMINI_MODEL.startswith("gemini-")
+
+    def test_analyst_fallback_note_mentions_gemini(self, monkeypatch):
+        from engine import analyst as analyst_mod
+        from app.core import config
+
+        test_settings = config.Settings(gemini_api_key=None, google_api_key=None, anthropic_api_key=None)
+        monkeypatch.setattr(config, "get_settings", lambda: test_settings)
+        monkeypatch.setattr(analyst_mod, "get_settings", lambda: test_settings)
+
+        evidence = analyst_mod.Evidence()
+        ans = analyst_mod.answer("What is the airfare index today?", evidence, prefer_model=True)
+        assert ans.mode == "deterministic"
+        assert "GEMINI_API_KEY" in ans.notes[0]
+
+    def test_analyst_gemini_mocked_answer(self, monkeypatch):
+        from engine import analyst as analyst_mod
+        from app.core import config
+
+        # Configure settings with a fake Gemini key
+        test_settings = config.Settings(gemini_api_key="fake-gemini-key")
+        monkeypatch.setattr(config, "get_settings", lambda: test_settings)
+        monkeypatch.setattr(analyst_mod, "get_settings", lambda: test_settings)
+
+        class MockResponse:
+            status_code = 200
+
+            def json(self):
+                return {
+                    "candidates": [
+                        {
+                            "content": {
+                                "parts": [{"text": "The index today is 105.5."}],
+                                "role": "model",
+                            },
+                            "finishReason": "STOP",
+                        }
+                    ]
+                }
+
+        import httpx
+        monkeypatch.setattr(httpx, "post", lambda *args, **kwargs: MockResponse())
+
+        evidence = analyst_mod.Evidence()
+        evidence.add("latest_index", {"date": "2026-09-19", "apix": 105.5, "coverage": 1.0})
+        ans = analyst_mod.answer("What is the airfare index today?", evidence, prefer_model=True)
+
+        assert ans.mode == "model"
+        assert ans.answer == "The index today is 105.5."
+        assert "gemini" in ans.notes[0]
 

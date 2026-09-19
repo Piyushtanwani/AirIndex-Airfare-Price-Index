@@ -174,9 +174,9 @@ Derived from the published index, and never feeding back into it.
 Two notes on that table. The quantity-dependent formulas need quantities nobody publishes
 for Indian routes, so the endpoint makes the assumption explicit and offers a `fixed` mode
 that demonstrates five of them collapsing into one identical number. The analyst composes
-its answer from an evidence block returned with every reply; without an `ANTHROPIC_API_KEY`
-no language model is involved at all, and with one, Claude phrases the same evidence under
-the same grounding rules and is never the source of a number.
+its answer from an evidence block returned with every reply; without a `GEMINI_API_KEY` or
+`ANTHROPIC_API_KEY` no language model is involved at all, and with one, the model phrases
+the same evidence under the same grounding rules and is never the source of a number.
 
 Response shapes: [docs/api-contract.md](docs/api-contract.md) and
 [docs/api-contract-analytics.md](docs/api-contract-analytics.md).

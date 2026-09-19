@@ -99,6 +99,14 @@ class Settings(BaseSettings):
     # Model-backed analyst. Without a key the analyst stays on its deterministic path.
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
+    gemini_api_key: str | None = None
+    google_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
+    analyst_provider: str = "auto"  # "auto", "gemini", or "anthropic"
+
+    @property
+    def effective_gemini_api_key(self) -> str | None:
+        return self.gemini_api_key or self.google_api_key
 
     @property
     def cors_origin_list(self) -> list[str]:

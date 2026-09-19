@@ -47,6 +47,7 @@ function EvidenceViewer({ evidence }: { evidence: Record<string, unknown> }) {
 
 export default function Ask() {
   const [question, setQuestion] = useState('')
+  const [useModel, setUseModel] = useState(true)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const suggestionsQuery = useAskSuggestions()
   const mutation = useAsk()
@@ -55,7 +56,7 @@ export default function Ask() {
     const trimmed = q.trim()
     if (!trimmed) return
     mutation.mutate(
-      { question: trimmed, use_model: false },
+      { question: trimmed, use_model: useModel },
       {
         onSuccess: (response) => {
           setHistory((prev) => [{ question: trimmed, response }, ...prev])
@@ -102,6 +103,18 @@ export default function Ask() {
           >
             {mutation.isPending ? 'Asking…' : 'Ask'}
           </button>
+        </div>
+
+        <div className="flex items-center gap-2 pt-1">
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-text-muted select-none">
+            <input
+              type="checkbox"
+              checked={useModel}
+              onChange={(e) => setUseModel(e.target.checked)}
+              className="rounded border-border text-accent focus:ring-accent"
+            />
+            <span>Prefer AI model phrasing (Gemini / Claude) when configured</span>
+          </label>
         </div>
 
         {suggestionsQuery.data && suggestionsQuery.data.suggestions.length > 0 ? (

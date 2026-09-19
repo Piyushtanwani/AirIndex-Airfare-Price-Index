@@ -32,6 +32,7 @@ from typing import Any
 from app.core.config import get_settings
 
 DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 SYSTEM_PROMPT = """\
 You are the analyst interface to AirIndex, a real-time airfare price index for India built
@@ -254,7 +255,95 @@ def answer_deterministically(question: str, evidence: Evidence) -> str:
 # Model-backed path
 # ---------------------------------------------------------------------------
 
-def answer_with_model(question: str, evidence: Evidence) -> tuple[str, list[str]]:
+def answer_with_gemini(question: str, evidence: Evidence) -> tuple[str, list[str]]:
+    """Ask Gemini, giving it only the evidence block.
+
+    Raises RuntimeError when the key is unavailable or the API call fails, so the caller
+    falls back to the deterministic path rather than returning nothing.
+    """
+    import httpx
+
+    settings = get_settings()
+    api_key = settings.effective_gemini_api_key
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+
+    model = (settings.gemini_model or DEFAULT_GEMINI_MODEL).strip()
+    model_id = model.removeprefix("models/")
+
+    message = (
+        f"{evidence.render()}\n\n"
+        f"QUESTION\n{question}\n\n"
+        "Answer using only the evidence above."
+    )
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": SYSTEM_PROMPT}]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": message}]
+            }
+        ],
+        "generationConfig": {
+            "maxOutputTokens": 1024,
+            "temperature": 0.2,
+        },
+    }
+
+    try:
+        response = httpx.post(url, json=payload, timeout=30.0)
+    except Exception as exc:
+        raise RuntimeError(f"Failed to connect to Gemini API: {exc}") from exc
+
+    # If the chosen model is 404 (not supported or invalid endpoint), try fallback to gemini-1.5-flash
+    if response.status_code == 404 and model_id != "gemini-1.5-flash":
+        fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        try:
+            fallback_resp = httpx.post(fallback_url, json=payload, timeout=30.0)
+            if fallback_resp.status_code == 200:
+                response = fallback_resp
+                model_id = "gemini-1.5-flash"
+        except Exception:
+            pass
+
+    if response.status_code != 200:
+        error_msg = response.text
+        try:
+            err_json = response.json()
+            error_msg = err_json.get("error", {}).get("message", response.text)
+        except Exception:
+            pass
+        raise RuntimeError(f"Gemini API error ({response.status_code}): {error_msg}")
+
+    data = response.json()
+    candidates = data.get("candidates", [])
+    if not candidates:
+        prompt_feedback = data.get("promptFeedback", {})
+        block_reason = prompt_feedback.get("blockReason")
+        if block_reason:
+            raise RuntimeError(f"Gemini blocked the prompt: {block_reason}")
+        raise RuntimeError("Gemini returned no response candidates.")
+
+    first_candidate = candidates[0]
+    finish_reason = first_candidate.get("finishReason")
+    if finish_reason in ("SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT"):
+        raise RuntimeError(f"Gemini declined to answer: {finish_reason}")
+
+    content = first_candidate.get("content", {})
+    parts = content.get("parts", [])
+    text = "".join(part.get("text", "") for part in parts).strip()
+    if not text:
+        raise RuntimeError("The model returned no text.")
+
+    notes = [f"Answered by {model_id} from the evidence block, which is returned with this reply."]
+    return text, notes
+
+
+def answer_with_anthropic(question: str, evidence: Evidence) -> tuple[str, list[str]]:
     """Ask Claude, giving it only the evidence block.
 
     Raises RuntimeError when the SDK or key is unavailable, so the caller falls back to
@@ -301,6 +390,24 @@ def answer_with_model(question: str, evidence: Evidence) -> tuple[str, list[str]
     return text, notes
 
 
+def answer_with_model(question: str, evidence: Evidence) -> tuple[str, list[str]]:
+    """Ask configured model (Gemini or Claude), giving it only the evidence block."""
+    settings = get_settings()
+    provider = (settings.analyst_provider or "auto").lower()
+
+    if provider == "gemini":
+        return answer_with_gemini(question, evidence)
+    elif provider == "anthropic":
+        return answer_with_anthropic(question, evidence)
+    else:  # auto
+        if settings.effective_gemini_api_key:
+            return answer_with_gemini(question, evidence)
+        elif settings.anthropic_api_key:
+            return answer_with_anthropic(question, evidence)
+        else:
+            raise RuntimeError("Neither GEMINI_API_KEY nor ANTHROPIC_API_KEY is set")
+
+
 def answer(question: str, evidence: Evidence, *, prefer_model: bool = True) -> AnalystAnswer:
     """Answer a question, preferring the model when one is configured."""
     question = (question or "").strip()
@@ -319,7 +426,10 @@ def answer(question: str, evidence: Evidence, *, prefer_model: bool = True) -> A
             evidence=evidence.sections,
         )
 
-    if prefer_model and get_settings().anthropic_api_key:
+    settings = get_settings()
+    has_model_key = bool(settings.effective_gemini_api_key or settings.anthropic_api_key)
+
+    if prefer_model and has_model_key:
         try:
             text, notes = answer_with_model(question, evidence)
             return AnalystAnswer(
@@ -340,7 +450,7 @@ def answer(question: str, evidence: Evidence, *, prefer_model: bool = True) -> A
         evidence=evidence.sections,
         notes=[
             "Composed directly from the data with no language model involved. Set "
-            "ANTHROPIC_API_KEY to enable the model-backed phrasing, which reads the same "
+            "GEMINI_API_KEY or ANTHROPIC_API_KEY to enable the model-backed phrasing, which reads the same "
             "evidence and is held to the same grounding rules."
         ],
     )

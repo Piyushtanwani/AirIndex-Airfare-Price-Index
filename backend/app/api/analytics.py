@@ -586,8 +586,9 @@ def ask(body: AskRequest, session: Session = Depends(get_session)) -> AskRespons
     """Ask a question about the index and get an answer grounded in the data.
 
     Every number in the answer comes from the evidence block, which is returned with the
-    reply so it can be checked. Without an Anthropic API key configured the answer is
-    composed directly from that evidence with no language model involved.
+    reply so it can be checked. Without a model API key configured (GEMINI_API_KEY
+    or ANTHROPIC_API_KEY) the answer is composed directly from that evidence with no
+    language model involved.
     """
     evidence = _build_evidence(session)
     result = analyst_mod.answer(body.question, evidence, prefer_model=body.use_model)
