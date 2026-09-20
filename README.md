@@ -82,7 +82,7 @@ That brings up PostgreSQL, the API, a scheduled collector and the dashboard.
 | Component | Stack |
 |---|---|
 | Collector | Python 3.12, APScheduler, httpx, Playwright (optional) |
-| Engine | pandas, NumPy |
+| Engine | pandas, NumPy, Gemini / Claude LLM integration |
 | API | FastAPI, SQLAlchemy 2, Pydantic v2 |
 | Dashboard | React 19, Vite, TypeScript, Tailwind, TanStack Query, Recharts |
 | Storage | SQLite by default, PostgreSQL 16 in Docker |
@@ -169,7 +169,7 @@ Derived from the published index, and never feeding back into it.
 | `GET /v1/analytics/forecast` | Fourteen-day ensemble projection with out-of-sample model scores |
 | `GET /v1/analytics/anomalies` | Unusual day-on-day movements in the series |
 | `POST /v1/analytics/scenario` | Airfare, fuel, demand and capacity shocks, with a sensitivity table |
-| `POST /v1/analytics/ask` | Questions answered from the stored data |
+| `POST /v1/analytics/ask` | Questions answered from the stored data (Gemini, Claude, or deterministic) |
 
 Two notes on that table. The quantity-dependent formulas need quantities nobody publishes
 for Indian routes, so the endpoint makes the assumption explicit and offers a `fixed` mode
@@ -177,6 +177,8 @@ that demonstrates five of them collapsing into one identical number. The analyst
 its answer from an evidence block returned with every reply; without a `GEMINI_API_KEY` or
 `ANTHROPIC_API_KEY` no language model is involved at all, and with one, the model phrases
 the same evidence under the same grounding rules and is never the source of a number.
+Providers (`gemini` or `anthropic`) can be explicitly selected via `ANALYST_PROVIDER` or
+auto-detected, with built-in model fallback (e.g. `gemini-2.5-flash` to `gemini-1.5-flash`).
 
 Response shapes: [docs/api-contract.md](docs/api-contract.md) and
 [docs/api-contract-analytics.md](docs/api-contract-analytics.md).
@@ -200,7 +202,7 @@ Thirteen pages behind a capsule navigation bar, in light and dark, responsive to
 | Forecast | Projection with interval and a model scorecard |
 | Trust | Component scores, with unmeasured components shown as unmeasured |
 | Simulator | Shock sliders, transmission channels, sensitivity |
-| Analyst | Questions, answers, and the evidence behind each one |
+| Analyst | Questions, answers, and the evidence behind each one, with an AI phrasing toggle |
 | Diagnostics | Back-test and series anomalies |
 
 ---
@@ -222,7 +224,25 @@ adapters stay disabled, and that the shipped development key is refused outside 
 
 ## Configuration
 
-Copy `.env.example` to `.env`. Four files under `backend/config/` drive the substance:
+Copy `.env.example` to `.env`.
+
+### Key Environment Variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///airindex.db` | Full database connection string (SQLite or PostgreSQL) |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | unset | Alternative individual database parameters, assembled automatically |
+| `GEMINI_API_KEY` / `GOOGLE_API_KEY` | unset | Enables Google Gemini model-backed analyst phrasing |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model ID (with automatic fallback to `gemini-1.5-flash`) |
+| `ANTHROPIC_API_KEY` | unset | Enables Anthropic Claude model-backed analyst phrasing |
+| `ANTHROPIC_MODEL` | `claude-opus-5` | Claude model ID |
+| `ANALYST_PROVIDER` | `auto` | Analyst provider (`auto`, `gemini`, or `anthropic`) |
+| `API_KEY_REQUIRED` | `false` | When true, requires `X-API-Key` on read endpoints |
+| `ADMIN_API_KEY` | `dev-admin-key-change-me` | Key required for administrative actions (`POST /v1/admin/recompute`) |
+
+### Configuration Files
+
+Four files under `backend/config/` drive the substance:
 
 | File | Contents |
 |---|---|

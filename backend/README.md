@@ -98,7 +98,7 @@ engine/
   trust.py                Data trust scoring
   forecast.py             Four models and an ensemble
   scenario.py             Policy simulation and anomaly detection
-  analyst.py              Grounded question answering
+  analyst.py              Grounded question answering (Gemini REST / Claude SDK / deterministic)
 config/
   routes.yaml             The basket
   weights.yaml            Route and lead-time weights, with provenance
@@ -190,6 +190,7 @@ rewritten.
 | Variable | Default | Note |
 |---|---|---|
 | `DATABASE_URL` | SQLite in the repository root | Point at PostgreSQL for anything beyond a laptop |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | unset | Discrete database credentials, assembled automatically if `DATABASE_URL` is omitted |
 | `COLLECTOR_ENABLED_SOURCES` | `synthetic` | Comma-separated |
 | `COLLECTOR_RESPECT_ROBOTS` | `true` | Leave it true |
 | `COLLECTOR_LIVE_ADAPTERS_ENABLED` | `false` | Requires a recorded terms review first |
@@ -197,8 +198,10 @@ rewritten.
 | `ADMIN_API_KEY` | a refused placeholder | Change before deploying |
 | `SCHEDULER_ENABLED` | `false` | The collector belongs in its own process |
 | `GEMINI_API_KEY` | unset | Optional. Enables Gemini model-backed analyst phrasing |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Model used when `GEMINI_API_KEY` is provided |
+| `GOOGLE_API_KEY` | unset | Optional alias for `GEMINI_API_KEY` |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Model used when `GEMINI_API_KEY` is provided (falls back to `gemini-1.5-flash`) |
 | `ANTHROPIC_API_KEY` | unset | Optional. Enables Anthropic Claude model-backed analyst phrasing |
+| `ANTHROPIC_MODEL` | `claude-opus-5` | Model used when `ANTHROPIC_API_KEY` is provided |
 | `ANALYST_PROVIDER` | `auto` | `auto`, `gemini`, or `anthropic` |
 
 ---
