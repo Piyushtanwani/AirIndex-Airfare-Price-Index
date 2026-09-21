@@ -573,7 +573,7 @@ def quality_summary(
 
     raw_count = session.scalar(
         select(func.count()).select_from(RawObservation).where(
-            func.date(RawObservation.captured_at) >= since.isoformat()
+            func.date(RawObservation.captured_at) >= since
         )
     ) or 0
     valid_count = session.scalar(
@@ -588,7 +588,7 @@ def quality_summary(
     ) or 0
     duplicates = session.scalar(
         select(func.coalesce(func.sum(CrawlRun.duplicates), 0)).where(
-            func.date(CrawlRun.started_at) >= since.isoformat()
+            func.date(CrawlRun.started_at) >= since
         )
     ) or 0
     outliers = session.scalar(
