@@ -22,6 +22,7 @@ import type {
   NationalStats,
 } from '../types/map'
 import type { FlightData } from '../types/flight'
+import { API_BASE_URL } from '../lib/api'
 
 // Lead Time multiplier map
 const LEAD_TIME_CONFIG: Record<
@@ -135,13 +136,21 @@ export const IntelligenceMapPage: React.FC = () => {
   const { data: apiRoutesData } = useQuery<RouteData[]>({
     queryKey: ['routes', selectedRegion, airline, leadTime, hotspotsOnly, viewMetric],
     queryFn: async () => {
+      const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+      const isLocalApi = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1')
+      const canFetch = Boolean(API_BASE_URL) && !(isHttps && isLocalApi)
+
+      if (!canFetch) {
+        return ROUTES_DATA
+      }
+
       try {
         const res = await fetch(
-          `http://localhost:8000/v1/routes?window=${leadConfig.windowDays}&carrier=${encodeURIComponent(airline)}`,
+          `${API_BASE_URL}/v1/routes?window=${leadConfig.windowDays}&carrier=${encodeURIComponent(airline)}`,
         )
         if (!res.ok) throw new Error('API offline')
         const data = await res.json()
-        return data as RouteData[]
+        return (data && Array.isArray(data) && data.length > 0) ? (data as RouteData[]) : ROUTES_DATA
       } catch {
         return ROUTES_DATA
       }

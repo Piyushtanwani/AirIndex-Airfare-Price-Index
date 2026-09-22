@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../lib/api'
+
 export type FlightOperationalStatus =
   | 'scheduled'
   | 'boarding'
@@ -124,19 +126,25 @@ export async function getTodayFlightStatus(
 ): Promise<LiveFlightStatusData> {
   const cleanNo = flightNo.replace(/[\s-]/g, '').toUpperCase()
 
-  // Simulate 600ms network fetch delay
-  await new Promise((resolve) => setTimeout(resolve, 600))
+  // Simulate network fetch delay
+  await new Promise((resolve) => setTimeout(resolve, 400))
 
-  try {
-    const res = await fetch(
-      `http://localhost:8000/v1/flights/status?flight_no=${encodeURIComponent(cleanNo)}&date=${encodeURIComponent(date)}`,
-    )
-    if (res.ok) {
-      const data = await res.json()
-      return data as LiveFlightStatusData
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+  const isLocalApi = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1')
+  const canFetch = Boolean(API_BASE_URL) && !(isHttps && isLocalApi)
+
+  if (canFetch) {
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/v1/flights/status?flight_no=${encodeURIComponent(cleanNo)}&date=${encodeURIComponent(date)}`,
+      )
+      if (res.ok) {
+        const data = await res.json()
+        return data as LiveFlightStatusData
+      }
+    } catch {
+      // Backend offline fallback
     }
-  } catch {
-    // Backend offline fallback
   }
 
   const match = MOCK_OPERATIONAL_DATABASE[cleanNo]

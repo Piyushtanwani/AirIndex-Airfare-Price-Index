@@ -1,8 +1,29 @@
 // Typed API client for the AirIndex backend.
 // Every interface mirrors a response shape documented in docs/api-contract.md.
 
-export const API_BASE_URL: string =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000'
+export const API_BASE_URL: string = (() => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL as string | undefined
+  if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, '')
+  if (typeof window !== 'undefined') {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    return isLocal ? 'http://localhost:8000' : 'https://air-index-backend.vercel.app'
+  }
+  return import.meta.env.DEV ? 'http://localhost:8000' : 'https://air-index-backend.vercel.app'
+})()
+
+export const WS_BASE_URL: string = (() => {
+  const envWs = import.meta.env.VITE_WS_BASE_URL as string | undefined
+  if (envWs && envWs.trim()) return envWs.trim().replace(/\/+$/, '')
+  if (API_BASE_URL) {
+    if (API_BASE_URL.startsWith('https://')) return API_BASE_URL.replace(/^https:\/\//, 'wss://')
+    if (API_BASE_URL.startsWith('http://')) return API_BASE_URL.replace(/^http:\/\//, 'ws://')
+  }
+  if (typeof window !== 'undefined') {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    return isLocal ? 'ws://localhost:8000' : ''
+  }
+  return import.meta.env.DEV ? 'ws://localhost:8000' : ''
+})()
 
 const API_KEY: string | undefined = import.meta.env.VITE_API_KEY as string | undefined
 
@@ -435,7 +456,9 @@ export interface AnomaliesResponse {
 // ------------------------------------------------------------------------
 
 function buildUrl(path: string, params?: Record<string, string | number | undefined>): string {
-  const url = new URL(path.replace(/^\//, ''), API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`)
+  const cleanPath = path.replace(/^\//, '')
+  const base = API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000')
+  const url = new URL(cleanPath, base.endsWith('/') ? base : `${base}/`)
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== '') {

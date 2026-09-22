@@ -30,6 +30,17 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _strip_empty_strings(cls, values: dict) -> dict:
+        """Treat empty-string env vars as unset so that defaults apply.
+
+        Vercel and other PaaS providers sometimes inject environment variables
+        with empty values.  Pydantic cannot parse '' as bool or int, so we
+        remove those entries before validation.
+        """
+        return {k: v for k, v in values.items() if v != ""}
+
     app_name: str = "AirIndex"
     environment: str = "development"
     debug: bool = True
@@ -65,12 +76,18 @@ class Settings(BaseSettings):
                 f"postgresql+psycopg://{credentials}@{self.db_host}:{port}/{self.db_name}"
             )
         else:
-            self.database_url = f"sqlite:///{(REPO_DIR / 'airindex.db').as_posix()}"
+            import os
+            # On Vercel, /tmp is the only writable directory.
+            if os.environ.get("VERCEL"):
+                db_path = Path("/tmp/airindex.db").as_posix()
+            else:
+                db_path = (REPO_DIR / "airindex.db").as_posix()
+            self.database_url = f"sqlite:///{db_path}"
         return self
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://air-index-tau.vercel.app"
 
     # Authentication. Read endpoints are open in development; admin always needs a key.
     api_key_required: bool = False

@@ -1,4 +1,5 @@
 import type { FlightData } from '../types/flight'
+import { WS_BASE_URL } from '../lib/api'
 
 export function subscribeToLiveFlights(
   onUpdate: (updatedFlights: Partial<FlightData>[]) => void,
@@ -6,8 +7,19 @@ export function subscribeToLiveFlights(
   let ws: WebSocket | null = null;
   let intervalId: ReturnType<typeof setInterval> | null = null;
 
+  // Don't attempt to connect to ws://localhost if deployed on HTTPS (blocked by PNA / mixed content)
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  const isLocalWs = WS_BASE_URL.includes('localhost') || WS_BASE_URL.includes('127.0.0.1');
+
+  if (!WS_BASE_URL || (isHttps && isLocalWs)) {
+    startFallbackTimer();
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }
+
   try {
-    const wsUrl = 'ws://localhost:8000/ws/flights';
+    const wsUrl = `${WS_BASE_URL}/ws/flights`;
     ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {
