@@ -9,10 +9,27 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+import os
+import shutil
+from pathlib import Path
+
 from app.core.config import get_settings
 from app.db.models import Base
 
 _settings = get_settings()
+
+# On ephemeral serverless platforms (like Vercel /tmp) or fresh setups,
+# automatically hydrate from seed.db if the database doesn't exist yet.
+if _settings.is_sqlite:
+    try:
+        db_path_str = _settings.database_url.replace("sqlite:///", "")
+        db_file = Path(db_path_str)
+        seed_file = Path(__file__).resolve().parent / "seed.db"
+        if seed_file.exists() and (not db_file.exists() or db_file.stat().st_size < 100_000):
+            db_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(seed_file, db_file)
+    except Exception:
+        pass
 
 _connect_args = {"check_same_thread": False} if _settings.is_sqlite else {}
 
