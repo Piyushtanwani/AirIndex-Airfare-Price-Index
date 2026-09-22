@@ -7,7 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 if (typeof window !== 'undefined' && typeof (maplibregl as any).setWorkerUrl === 'function') {
   (maplibregl as any).setWorkerUrl(maplibreWorkerUrl)
 }
-import { AIRPORTS } from '../../data/airports'
+import { AIRPORTS, AIRPORT_MAP } from '../../data/airports'
 import { generateCurvedRouteFeature } from './FlightRoute'
 import { createCreativeAirportMarker } from './AirportMarker'
 import type { SourcedAirport } from '../../data/airports'
@@ -99,6 +99,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   const airportMarkersRef = useRef<maplibregl.Marker[]>([])
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('ready')
   const [isLegendCollapsed, setIsLegendCollapsed] = useState(false)
+  const [, setMapMoveSeq] = useState(0)
 
   // Floating hover tooltip state
   const [hoveredRouteInfo, setHoveredRouteInfo] = useState<{
@@ -215,6 +216,14 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     map.doubleClickZoom.enable()
     map.boxZoom.disable()
     map.keyboard.enable()
+
+    // Real-time projection sync for SVG flight arcs
+    const onMapChange = () => {
+      if (isMounted) setMapMoveSeq((s) => (s + 1) % 100000)
+    }
+    map.on('move', onMapChange)
+    map.on('zoom', onMapChange)
+    map.on('resize', onMapChange)
 
     // Responsive fitBounds recalculation on container size change
     const containerEl = mapContainerRef.current
@@ -595,6 +604,68 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         ref={mapContainerRef}
         className="map-container absolute inset-0 h-full w-full z-0"
       />
+
+      {/* 2. SVG Flight Corridor Arcs (Direct vector projection overlay - 100% visible on every device) */}
+      <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-hidden">
+        {(() => {
+          const activeMap = mapRef.current
+          if (!activeMap) return null
+
+          return filteredRoutes.map((r) => {
+            const origApt = AIRPORT_MAP.get(r.origin)
+            const destApt = AIRPORT_MAP.get(r.destination)
+            if (!origApt || !destApt) return null
+
+            try {
+              const p1 = activeMap.project(origApt.coordinates)
+              const p2 = activeMap.project(destApt.coordinates)
+
+              const dx = p2.x - p1.x
+              const dy = p2.y - p1.y
+              const midX = (p1.x + p2.x) / 2
+              const midY = (p1.y + p2.y) / 2
+              const curvature = 0.22
+              const cx = midX - dy * curvature
+              const cy = midY + dx * curvature
+
+              const pathD = `M ${p1.x} ${p1.y} Q ${cx} ${cy} ${p2.x} ${p2.y}`
+
+              let strokeColor = '#F97316'
+              if (r.apix > 115) strokeColor = '#EF4444'
+              else if (r.apix >= 108) strokeColor = '#F97316'
+              else if (r.apix >= 102) strokeColor = '#EAB308'
+              else strokeColor = '#22C55E'
+
+              const isSel = selectedRoute?.id === r.id
+
+              return (
+                <g key={`svg-arc-${r.id}`}>
+                  {/* Outer glow/casing for high contrast over map tiles */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={darkMode ? '#020617' : '#FFFFFF'}
+                    strokeWidth={isSel ? 6 : 4.5}
+                    strokeOpacity={0.85}
+                    strokeLinecap="round"
+                  />
+                  {/* Vibrant curved flight corridor line */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth={isSel ? 3.5 : 2.5}
+                    strokeOpacity={0.95}
+                    strokeLinecap="round"
+                  />
+                </g>
+              )
+            } catch {
+              return null
+            }
+          })
+        })()}
+      </svg>
 
       {/* 2. Bottom-Left Legend Overlay (Elevated with z-30, solid white bg) */}
       <div className="pointer-events-auto absolute left-4 bottom-6 z-30 hidden sm:flex flex-col rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-white transition-all">
