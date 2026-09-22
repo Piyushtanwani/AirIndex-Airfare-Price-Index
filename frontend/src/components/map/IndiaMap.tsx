@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
-import MapLibreWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+// Configure worker URL for Vite production bundling
+if (typeof window !== 'undefined' && typeof (maplibregl as any).setWorkerUrl === 'function') {
+  (maplibregl as any).setWorkerUrl(maplibreWorkerUrl)
+}
 import { AIRPORTS } from '../../data/airports'
 import { generateCurvedRouteFeature } from './FlightRoute'
 import { createCreativeAirportMarker } from './AirportMarker'
@@ -167,6 +172,11 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     return true
   })
 
+  const filteredRoutesRef = useRef(filteredRoutes)
+  filteredRoutesRef.current = filteredRoutes
+  const viewMetricRef = useRef(viewMetric)
+  viewMetricRef.current = viewMetric
+
   // Initialize MapLibre GL Map strictly once
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
@@ -176,7 +186,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     const initialWidth = mapContainerRef.current.clientWidth || window.innerWidth
     const initialStyle = OPENSTREETMAP_RASTER_STYLE
 
-    const mapOptions: maplibregl.MapOptions & { workerClass?: unknown } = {
+    const mapOptions: maplibregl.MapOptions = {
       container: mapContainerRef.current,
       style: initialStyle,
       bounds: INDIA_BOUNDS,
@@ -190,10 +200,9 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       dragRotate: true,
       touchPitch: false,
       cooperativeGestures: false,
-      workerClass: MapLibreWorker,
     }
 
-    const map = new maplibregl.Map(mapOptions as maplibregl.MapOptions)
+    const map = new maplibregl.Map(mapOptions)
     mapRef.current = map
 
     // Natural Touch & Desktop Gestures
@@ -232,8 +241,8 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       fitIndiaBounds(map)
 
       // 1. Corridors Source & Layers
-      const corridorFeatures = safeRoutes
-        .map((r) => generateCurvedRouteFeature(r, viewMetric))
+      const corridorFeatures = (filteredRoutesRef.current || safeRoutes)
+        .map((r) => generateCurvedRouteFeature(r, viewMetricRef.current))
         .filter((f): f is NonNullable<typeof f> => f !== null)
 
       map.addSource('flight-corridors', {
@@ -244,7 +253,23 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         },
       })
 
-      // Base Corridor Line Layer
+      // Casing/Glow layer beneath the line for maximum contrast on all maps
+      map.addLayer({
+        id: 'corridors-casing',
+        type: 'line',
+        source: 'flight-corridors',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': darkMode ? '#020617' : '#ffffff',
+          'line-width': 5.5,
+          'line-opacity': 0.85,
+        },
+      })
+
+      // Base Corridor Line Layer (3px width, vibrant)
       map.addLayer({
         id: 'corridors-line',
         type: 'line',
@@ -254,9 +279,9 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
           'line-cap': 'round',
         },
         paint: {
-          'line-color': ['get', 'color'],
-          'line-width': 2,
-          'line-opacity': 0.9,
+          'line-color': ['coalesce', ['get', 'color'], '#EA580C'],
+          'line-width': 3,
+          'line-opacity': 0.95,
         },
       })
 
