@@ -150,24 +150,7 @@ export const IntelligenceMapPage: React.FC = () => {
         )
         if (!res.ok) throw new Error('API offline')
         const data = await res.json()
-        const rawItems = Array.isArray(data) ? data : (data?.items || [])
-        if (rawItems.length === 0) return ROUTES_DATA
-
-        return rawItems.map((item: any) => ({
-          id: String(item.code || item.id || `${item.origin}-${item.destination}`),
-          origin: item.origin,
-          destination: item.destination,
-          apix: Number(item.latest_apix ?? item.apix ?? 100),
-          change: Number(item.wow_pct ?? item.change ?? 0),
-          cheapestFare: Number(item.cheapestFare ?? 4200),
-          highestFare: Number(item.highestFare ?? 11500),
-          volatility: Number(item.volatility ?? 12.5),
-          observations: Number(item.obs_30d ?? item.observations ?? 300),
-          trustScore: Number(item.trustScore ?? 95),
-          lastUpdated: item.lastUpdated ?? 'Live',
-          status: (item.status ?? 'Rising') as 'Hot' | 'Rising' | 'Stable' | 'Falling',
-          contribValue: Number(item.contribValue ?? item.weight ?? 0.25),
-        })) as RouteData[]
+        return (data && Array.isArray(data) && data.length > 0) ? (data as RouteData[]) : ROUTES_DATA
       } catch {
         return ROUTES_DATA
       }
