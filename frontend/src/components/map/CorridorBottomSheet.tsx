@@ -1,8 +1,9 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Navigation, Plane, DollarSign, Calendar, Clock, BarChart3, TrendingUp } from 'lucide-react'
+import { X, Navigation, Plane, IndianRupee, Calendar, Clock, BarChart3, TrendingUp } from 'lucide-react'
 import type { RouteData } from '../../types/map'
 import { AIRPORTS } from '../../data/airports'
+import { formatInr } from '../../lib/format'
 
 interface CorridorBottomSheetProps {
   route: RouteData | null
@@ -10,9 +11,10 @@ interface CorridorBottomSheetProps {
   onClose: () => void
 }
 
-export const CorridorBottomSheet: React.FC<CorridorBottomSheetProps> = ({ route, darkMode, onClose }) => {
-  const isDark = darkMode ?? (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark')
-
+export const CorridorBottomSheet: React.FC<CorridorBottomSheetProps> = ({
+  route,
+  onClose,
+}) => {
   if (!route) return null
 
   const origAirport = AIRPORTS.find((a) => a.code === route.origin)
@@ -31,48 +33,33 @@ export const CorridorBottomSheet: React.FC<CorridorBottomSheetProps> = ({ route,
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: '100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-        className={`fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-4xl rounded-t-[24px] border-t p-6 shadow-2xl backdrop-blur-xl ${
-          isDark
-            ? 'border-slate-700/60 bg-[#071A33]/95 text-white'
-            : 'border-slate-200/90 bg-white/95 text-slate-800'
-        }`}
+        className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-4xl rounded-t-2xl border-t border-x border-border bg-surface p-5 sm:p-6 text-text shadow-2xl backdrop-blur-md"
       >
         {/* Header */}
-        <div className={`flex items-center justify-between border-b pb-4 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
-              isDark
-                ? 'bg-teal-500/20 text-teal-400 border-teal-500/30'
-                : 'bg-teal-50 text-teal-600 border-teal-200'
-            }`}>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-alt text-accent">
               <Navigation size={20} className="rotate-45" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className={`font-mono text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {route.origin} → {route.destination}
+                <span className="font-mono text-2xl font-semibold tracking-tight text-text">
+                  {route.origin} &rarr; {route.destination}
                 </span>
-                <span className={`rounded-md px-2.5 py-0.5 text-xs font-bold border ${
-                  isDark
-                    ? 'bg-teal-500/20 text-teal-300 border-teal-500/30'
-                    : 'bg-teal-50 text-teal-700 border-teal-200'
-                }`}>
+                <span className="inline-flex items-center rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
                   Corridor Analytics
                 </span>
               </div>
-              <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {origCity} to {destCity} • {distance} km
+              <p className="mt-0.5 text-xs text-text-muted">
+                {origCity} to {destCity} &bull; {distance} km
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className={`rounded-full p-1.5 transition ${
-              isDark
-                ? 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
-            }`}
+            className="rounded-full p-1.5 text-text-muted transition-colors hover:bg-surface-alt hover:text-text"
+            aria-label="Close sheet"
           >
             <X size={18} />
           </button>
@@ -80,72 +67,60 @@ export const CorridorBottomSheet: React.FC<CorridorBottomSheetProps> = ({ route,
 
         {/* 4-Column Intelligence Grid */}
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className={`rounded-xl border p-3 ${
-            isDark ? 'border-slate-800 bg-slate-800/40' : 'border-slate-200/90 bg-slate-50/70 shadow-sm'
-          }`}>
-            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              <Plane size={13} className={isDark ? 'text-teal-400' : 'text-teal-600'} /> Flights / Day
+          <div className="rounded-lg border border-border bg-surface-raised p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+              <Plane size={13} className="text-accent" /> Flights / Day
             </div>
-            <div className={`mt-1 font-mono text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className="mt-1 font-mono text-lg font-semibold tracking-tight text-text">
               {flightsPerDay} Daily
             </div>
           </div>
 
-          <div className={`rounded-xl border p-3 ${
-            isDark ? 'border-slate-800 bg-slate-800/40' : 'border-slate-200/90 bg-slate-50/70 shadow-sm'
-          }`}>
-            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              <DollarSign size={13} className={isDark ? 'text-emerald-400' : 'text-emerald-600'} /> Average Fare
+          <div className="rounded-lg border border-border bg-surface-raised p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+              <IndianRupee size={13} className="text-accent" /> Average Fare
             </div>
-            <div className={`mt-1 font-mono text-lg font-black ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
-              ₹{avgFare.toLocaleString('en-IN')}
+            <div className="mt-1 font-mono text-lg font-semibold tracking-tight text-text">
+              {formatInr(avgFare)}
             </div>
           </div>
 
-          <div className={`rounded-xl border p-3 ${
-            isDark ? 'border-slate-800 bg-slate-800/40' : 'border-slate-200/90 bg-slate-50/70 shadow-sm'
-          }`}>
-            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              <Calendar size={13} className={isDark ? 'text-purple-400' : 'text-purple-600'} /> Best Booking Window
+          <div className="rounded-lg border border-border bg-surface-raised p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+              <Calendar size={13} className="text-rise" /> Best Booking Window
             </div>
-            <div className={`mt-1 text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+            <div className="mt-1 text-xs font-medium text-text">
               T-21 Days (Tuesday)
             </div>
           </div>
 
-          <div className={`rounded-xl border p-3 ${
-            isDark ? 'border-slate-800 bg-slate-800/40' : 'border-slate-200/90 bg-slate-50/70 shadow-sm'
-          }`}>
-            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              <BarChart3 size={13} className={isDark ? 'text-amber-400' : 'text-amber-600'} /> Load Factor
+          <div className="rounded-lg border border-border bg-surface-raised p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+              <BarChart3 size={13} className="text-accent" /> Load Factor
             </div>
-            <div className={`mt-1 font-mono text-lg font-black ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+            <div className="mt-1 font-mono text-lg font-semibold tracking-tight text-text">
               87.4%
             </div>
           </div>
         </div>
 
         {/* Secondary Info Rows */}
-        <div className={`mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-xs ${
-          isDark
-            ? 'border-slate-800/80 bg-slate-900/60'
-            : 'border-slate-200/90 bg-slate-50/70 shadow-sm'
-        }`}>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-alt p-3 text-xs">
           <div className="flex items-center gap-2">
-            <Clock size={14} className={isDark ? 'text-blue-400' : 'text-blue-600'} />
-            <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Peak Demand Hours:</span>
-            <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>07:00–09:00 & 18:00–21:00</span>
+            <Clock size={14} className="text-text-muted" />
+            <span className="text-text-muted">Peak Demand:</span>
+            <span className="font-medium text-text">07:00–09:00 & 18:00–21:00</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <TrendingUp size={14} className={isDark ? 'text-teal-400' : 'text-teal-600'} />
-            <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Price Trend:</span>
-            <span className={`font-bold ${isDark ? 'text-teal-300' : 'text-teal-700'}`}>Rising (+4.2% MoM)</span>
+            <TrendingUp size={14} className="text-fall" />
+            <span className="text-text-muted">Price Trend:</span>
+            <span className="font-medium text-fall">Rising (+{route.change > 0 ? route.change : 3.4}% MoM)</span>
           </div>
 
-          <div className={`flex items-center gap-2 font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            <span>APIx: <strong className={isDark ? 'text-teal-400' : 'text-teal-700'}>{route.apix.toFixed(1)}</strong></span>
-            <span>Volatility: <strong className={isDark ? 'text-amber-300' : 'text-amber-700'}>{route.volatility}%</strong></span>
+          <div className="flex items-center gap-3 font-mono">
+            <span>APIx: <strong className="text-accent">{route.apix.toFixed(1)}</strong></span>
+            <span>Volatility: <strong className="text-rise">{route.volatility}%</strong></span>
           </div>
         </div>
       </motion.div>

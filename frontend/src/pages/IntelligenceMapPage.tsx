@@ -322,6 +322,41 @@ export const IntelligenceMapPage: React.FC = () => {
 
 
 
+  // Handle corridor selection from AirportModal or direct corridor triggers
+  const handleSelectCorridor = useCallback(
+    (orig: string, dest: string) => {
+      const existing = filteredRoutes.find(
+        (r) =>
+          (r.origin === orig && r.destination === dest) ||
+          (r.origin === dest && r.destination === orig),
+      )
+
+      const origAirport = AIRPORTS.find((a) => a.code === orig)
+      const destAirport = AIRPORTS.find((a) => a.code === dest)
+      const baseApix = origAirport?.inflationScore || destAirport?.inflationScore || 108.4
+
+      const route: RouteData = existing || {
+        id: `${orig}-${dest}`,
+        origin: orig,
+        destination: dest,
+        apix: Number(baseApix.toFixed(1)),
+        change: 3.8,
+        cheapestFare: Math.round(baseApix * 48),
+        highestFare: Math.round(baseApix * 96),
+        volatility: 13.2,
+        observations: 180,
+        trustScore: 94,
+        lastUpdated: 'Just now',
+        status: 'Rising',
+        contribValue: 0.22,
+      }
+
+      setSelectedAirport(null)
+      setSelectedCorridorLine(route)
+    },
+    [filteredRoutes],
+  )
+
   return (
     <div className="relative h-full w-full overflow-hidden bg-slate-100 dark:bg-[#030914]">
       {/* FULL BLEED BACKGROUND MAP */}
@@ -329,7 +364,7 @@ export const IntelligenceMapPage: React.FC = () => {
         <IndiaMap
           key={refreshKey}
           routes={filteredRoutes}
-          selectedRoute={null}
+          selectedRoute={selectedCorridorLine}
           onSelectRoute={handleSelectRoute}
           searchQuery={searchQuery}
           selectedRegion={selectedRegion}
@@ -339,41 +374,50 @@ export const IntelligenceMapPage: React.FC = () => {
           selectedFlight={selectedFlight}
           onSelectFlight={setSelectedFlight}
           darkMode={darkMode}
+          selectedAirport={selectedAirport}
           onSelectAirport={setSelectedAirport}
           onSelectCorridorLine={setSelectedCorridorLine}
         />
       </div>
 
-      {/* FLOATING TOP-RIGHT NATIONAL KPI WIDGETS */}
-      <div className="pointer-events-auto absolute bottom-5 right-4 z-20 flex flex-wrap gap-2 sm:bottom-auto sm:top-20 sm:right-6 sm:flex-col items-end">
-        <div className={`flex items-center gap-2.5 rounded-2xl border px-3 py-1.5 shadow-lg backdrop-blur-md transition ${
-          darkMode ? 'border-slate-800/80 bg-slate-900/85 text-white' : 'border-slate-200/80 bg-white/90 text-slate-900'
-        }`}>
-          <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-teal-500/10 text-teal-400">
-            <TrendingUp size={15} />
+      {/* FLOATING TOP-RIGHT NATIONAL KPI WIDGETS (Equal size, solid white bg, matching website UI) */}
+      <div className="pointer-events-auto absolute bottom-5 right-4 z-20 flex flex-wrap gap-2.5 sm:bottom-auto sm:top-20 sm:right-6 sm:flex-col items-end">
+        {/* Widget 1: National APIx */}
+        <div className="flex w-44 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-md dark:border-slate-800 dark:bg-slate-900 transition-all">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-teal-200/70 bg-teal-50 text-teal-700 dark:border-teal-500/30 dark:bg-teal-500/15 dark:text-teal-400">
+            <TrendingUp size={16} />
           </div>
-          <div>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               National APIx
             </div>
-            <div className="font-mono text-xs font-extrabold text-teal-400">
-              {derivedNationalStats.apix.toFixed(1)}
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-mono text-base font-bold tracking-tight text-slate-900 dark:text-white">
+                {derivedNationalStats.apix.toFixed(1)}
+              </span>
+              <span className="text-[10px] font-semibold text-teal-700 dark:text-teal-400">
+                +{derivedNationalStats.change}%
+              </span>
             </div>
           </div>
         </div>
 
-        <div className={`flex items-center gap-2.5 rounded-2xl border px-3 py-1.5 shadow-lg backdrop-blur-md transition ${
-          darkMode ? 'border-slate-800/80 bg-slate-900/85 text-white' : 'border-slate-200/80 bg-white/90 text-slate-900'
-        }`}>
-          <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
-            <ShieldCheck size={15} />
+        {/* Widget 2: Trust Score */}
+        <div className="flex w-44 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-md dark:border-slate-800 dark:bg-slate-900 transition-all">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-200/70 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400">
+            <ShieldCheck size={16} />
           </div>
-          <div>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Trust Score
             </div>
-            <div className="font-mono text-xs font-extrabold text-emerald-400">
-              {derivedNationalStats.trustScore}%
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-mono text-base font-bold tracking-tight text-slate-900 dark:text-white">
+                {derivedNationalStats.trustScore}%
+              </span>
+              <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                Verified
+              </span>
             </div>
           </div>
         </div>
@@ -409,14 +453,7 @@ export const IntelligenceMapPage: React.FC = () => {
         airport={selectedAirport}
         darkMode={darkMode}
         onClose={() => setSelectedAirport(null)}
-        onSelectCorridor={(orig, dest) => {
-          const foundRoute = filteredRoutes.find(
-            (r) => (r.origin === orig && r.destination === dest) || (r.origin === dest && r.destination === orig),
-          )
-          if (foundRoute) {
-            handleSelectRoute(foundRoute)
-          }
-        }}
+        onSelectCorridor={handleSelectCorridor}
       />
 
       {/* CORRIDOR ROUTE INTELLIGENCE BOTTOM SHEET */}

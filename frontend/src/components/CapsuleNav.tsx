@@ -11,7 +11,7 @@ interface NavItem {
 // labels are shortened and the order is regrouped: index pages first, then
 // (after the divider) the analysis pages.
 const ITEMS: NavItem[] = [
-  { to: '/', label: 'Route Map', end: true },
+  { to: '/', label: 'Map', end: true },
   { to: '/overview', label: 'Overview' },
   { to: '/routes', label: 'Routes' },
   { to: '/lead-times', label: 'Lead times' },

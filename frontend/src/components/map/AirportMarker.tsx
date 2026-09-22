@@ -1,41 +1,106 @@
 import React from 'react'
 import type { SourcedAirport } from '../../data/airports'
 
-export const createAirportMarkerElement = (
+export const createCreativeAirportMarker = (
   airport: SourcedAirport,
+  isSelected: boolean,
+  darkMode: boolean,
   onClick: (airport: SourcedAirport) => void,
 ): HTMLElement => {
-  const el = document.createElement('div')
-  el.className = 'group relative flex cursor-pointer items-center justify-center'
-  el.style.width = '24px'
-  el.style.height = '24px'
+  const container = document.createElement('div')
+  container.className = 'group relative flex flex-col items-center cursor-pointer select-none'
+  container.style.width = '26px'
+  container.style.height = '32px'
 
-  el.innerHTML = `
-    <!-- Crisp Black Dot with White Outline -->
-    <div class="relative h-3 w-3 rounded-full border-2 border-white bg-[#1A202C] shadow-md transition-transform duration-200 group-hover:scale-125"></div>
-    
-    <!-- IATA Code Label -->
-    <div class="absolute -bottom-4 whitespace-nowrap font-mono text-[10px] font-bold text-[#2D3748] bg-white/80 px-1 py-0.2 rounded shadow-sm transition group-hover:text-black group-hover:scale-105">
+  const pinColor = isSelected
+    ? '#EA580C' // Radiant orange when selected
+    : '#0F766E' // Exact deep pine teal requested by user (consistent across themes)
+
+  const pinStroke = isSelected
+    ? '#FFFFFF'
+    : darkMode
+      ? '#000000' // Black border in dark theme
+      : '#FFFFFF' // White border in light theme
+
+  const innerCircleFill = isSelected
+    ? '#C2410C'
+    : '#E6F4F1'
+
+  const planeColor = isSelected
+    ? '#FFFFFF'
+    : '#0F766E'
+
+  container.innerHTML = `
+    <!-- Radar Pulse Ring when Airport Selected -->
+    ${
+      isSelected
+        ? `<div class="absolute top-[26px] left-1/2 -translate-x-1/2 h-7 w-7 rounded-full pointer-events-none animate-ping bg-orange-500/50"></div>
+           <div class="absolute top-[29px] left-1/2 -translate-x-1/2 h-2.5 w-2.5 rounded-full pointer-events-none bg-orange-500 ring-4 ring-orange-400/40"></div>`
+        : ''
+    }
+
+    <!-- Creative Teardrop Airport Location Pin -->
+    <div class="relative flex items-center justify-center transition-all duration-200 ${
+      isSelected
+        ? 'scale-115 -translate-y-1 drop-shadow-[0_4px_8px_rgba(234,88,12,0.45)]'
+        : 'group-hover:scale-120 group-hover:-translate-y-1 drop-shadow-md'
+    }">
+      <svg width="26" height="32" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outer Teardrop Pin Body -->
+        <path d="M13 1C7.477 1 3 5.477 3 11C3 18.2 12.1 29.8 12.6 30.5C12.8 30.8 13.2 30.8 13.4 30.5C13.9 29.8 23 18.2 23 11C23 5.477 18.523 1 13 1Z" 
+              fill="${pinColor}" 
+              stroke="${pinStroke}" 
+              stroke-width="1.8"
+              stroke-linejoin="round"/>
+        
+        <!-- Inner Circular Core -->
+        <circle cx="13" cy="11" r="6.2" fill="${innerCircleFill}" />
+        
+        <!-- Ascending Takeoff Airplane Silhouette -->
+        <g transform="translate(13, 11) rotate(-35) translate(-12, -12)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="${planeColor}">
+            <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+          </svg>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Attached IATA Code Badge -->
+    <div class="absolute top-[32px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-tight shadow-sm border transition-all pointer-events-none ${
+      isSelected
+        ? 'bg-orange-600 text-white border-orange-400 ring-2 ring-orange-400/40 z-20 scale-105'
+        : darkMode
+          ? 'bg-slate-900 text-white border-slate-700 shadow-xs group-hover:bg-teal-900/50 group-hover:text-teal-400 group-hover:border-teal-700/80'
+          : 'bg-white text-slate-900 border-slate-200 shadow-xs group-hover:bg-teal-50 group-hover:text-teal-900 group-hover:border-teal-300'
+    }">
       ${airport.code}
     </div>
 
-    <!-- Hover Floating Tooltip (City + APIx) -->
-    <div class="pointer-events-none absolute bottom-7 left-1/2 -translate-x-1/2 opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-y-1 z-50">
-      <div class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-800 shadow-lg min-w-[120px]">
-        <div class="text-[11px] font-bold text-slate-900">${airport.city} (${airport.code})</div>
-        <div class="flex items-center justify-between mt-1 text-[10px]">
-          <span class="text-slate-500 font-medium">Index APIx:</span>
-          <span class="font-mono text-slate-900 font-bold">${airport.inflationScore}</span>
-        </div>
+    <!-- Floating Hover Tooltip (City + IATA + Airport Name) -->
+    <div class="pointer-events-none absolute bottom-[35px] left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center rounded-xl border px-3 py-1.5 text-xs shadow-xl whitespace-nowrap z-50 backdrop-blur-md transition-all ${
+      darkMode
+        ? 'border-slate-700/80 bg-slate-900/95 text-white'
+        : 'border-slate-200/90 bg-white/95 text-slate-900 shadow-lg'
+    }">
+      <div class="flex items-center gap-1.5 font-extrabold text-[12px]">
+        <span class="${darkMode ? 'text-teal-400' : 'text-teal-700'}">${airport.city}</span>
+        <span class="font-mono text-[10px] px-1 py-0.2 rounded bg-teal-500/15 text-teal-500">${airport.code}</span>
       </div>
+      <div class="text-[10px] text-text-muted font-medium mt-0.5">${airport.name}</div>
+      <div class="text-[9px] opacity-75 mt-0.5">APIx Base: <span class="font-mono font-bold">${airport.inflationScore.toFixed(1)}</span> &middot; ${airport.region}</div>
     </div>
   `
 
-  el.addEventListener('click', () => onClick(airport))
+  container.addEventListener('click', (e) => {
+    e.stopPropagation()
+    onClick(airport)
+  })
 
-  return el
+  return container
 }
 
 export const AirportMarker: React.FC = () => {
   return null
 }
+
+

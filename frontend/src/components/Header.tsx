@@ -33,7 +33,7 @@ export function Header({ isTransparent = false }: HeaderProps) {
           {/* Brand Logo Card (Floating Frosted Glass Pill) */}
           <Link
             to="/"
-            className="pointer-events-auto group flex items-center gap-3 select-none no-underline rounded-full border border-white/60 bg-white/80 px-3.5 py-1.5 shadow-lg backdrop-blur-md transition-all hover:bg-white/95 hover:shadow-xl dark:border-slate-800/80 dark:bg-slate-900/80 dark:hover:bg-slate-900/95"
+            className="pointer-events-auto group flex items-center gap-3 select-none no-underline rounded-full border border-white/60 bg-white/80 px-3.5 py-1.5 shadow-lg backdrop-blur-md transition-all hover:bg-white/95 hover:shadow-xl dark:border-border dark:bg-surface-raised dark:hover:bg-surface-alt"
             title="AirIndex — National Airfare Price Index"
           >
             <AirIndexIcon size="sm" />

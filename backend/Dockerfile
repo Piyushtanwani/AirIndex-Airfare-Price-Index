@@ -9,7 +9,8 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
 
@@ -18,7 +19,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && playwright install --with-deps chromium \
+    && chmod -R 777 /ms-playwright
 
 COPY . .
 
@@ -26,6 +29,7 @@ COPY . .
 # not be root while doing it.
 RUN useradd --create-home --uid 10001 airindex \
     && chown -R airindex:airindex /app
+
 USER airindex
 
 EXPOSE 8000

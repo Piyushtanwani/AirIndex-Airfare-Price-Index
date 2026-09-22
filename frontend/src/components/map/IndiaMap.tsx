@@ -4,36 +4,37 @@ import MapLibreWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { AIRPORTS } from '../../data/airports'
 import { generateCurvedRouteFeature } from './FlightRoute'
+import { createCreativeAirportMarker } from './AirportMarker'
 import type { SourcedAirport } from '../../data/airports'
 import type { RouteData, MetricViewFilter } from '../../types/map'
-import { RotateCcw, ZoomIn, ZoomOut, AlertCircle } from 'lucide-react'
+import { RotateCcw, ZoomIn, ZoomOut, AlertCircle, Layers, ChevronDown, ChevronUp } from 'lucide-react'
 import type { RegionFilter } from './MapToolbar'
 
 import type { FlightData } from '../../types/flight'
 
-// Subcontinent Bounding Box: [Southwest [minLng, minLat], Northeast [maxLng, maxLat]]
+// Focused Indian Domestic Aviation Corridors Bounding Box: [Southwest [minLng, minLat], Northeast [maxLng, maxLat]]
 const INDIA_BOUNDS: [[number, number], [number, number]] = [
-  [67.5, 6.0], // Southwest
-  [97.8, 37.5], // Northeast
+  [71.5, 7.8], // Southwest (Arabian Sea / Kerala / Gujarat coastal boundary)
+  [93.0, 32.2], // Northeast (Jammu & Punjab down to Assam & Northeast corridor)
 ]
 
 const getResponsivePadding = (width: number) => {
   if (width >= 1200) {
-    return { top: 70, left: 60, bottom: 50, right: 280 }
+    return { top: 85, left: 50, bottom: 50, right: 50 }
   } else if (width >= 900) {
-    return { top: 60, left: 40, bottom: 40, right: 220 }
+    return { top: 80, left: 40, bottom: 40, right: 40 }
   } else if (width >= 600) {
-    return { top: 40, left: 30, bottom: 40, right: 40 }
+    return { top: 75, left: 30, bottom: 40, right: 30 }
   } else {
-    return { top: 30, left: 20, bottom: 120, right: 20 }
+    return { top: 85, left: 16, bottom: 80, right: 16 }
   }
 }
 
-// Reliable Light Grayscale OpenStreetMap Basemap (Positron Style)
-const CARTO_POSITRON_RASTER_STYLE: maplibregl.StyleSpecification = {
+// Reliable OpenStreetMap Basemap
+const OPENSTREETMAP_RASTER_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    'carto-positron': {
+    'osm-tiles': {
       type: 'raster',
       tiles: [
         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -44,35 +45,9 @@ const CARTO_POSITRON_RASTER_STYLE: maplibregl.StyleSpecification = {
   },
   layers: [
     {
-      id: 'carto-positron-layer',
+      id: 'osm-tiles-layer',
       type: 'raster',
-      source: 'carto-positron',
-      minzoom: 0,
-      maxzoom: 19,
-    },
-  ],
-}
-
-// CartoDB Dark Matter Raster Style for Dark Mode
-const CARTO_DARK_MATTER_RASTER_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    'carto-dark': {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-      ],
-      tileSize: 256,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    },
-  },
-  layers: [
-    {
-      id: 'carto-dark-layer',
-      type: 'raster',
-      source: 'carto-dark',
+      source: 'osm-tiles',
       minzoom: 0,
       maxzoom: 19,
     },
@@ -91,6 +66,7 @@ interface IndiaMapProps {
   selectedFlight: FlightData | null
   onSelectFlight: (flight: FlightData | null) => void
   darkMode?: boolean
+  selectedAirport?: SourcedAirport | null
   onSelectAirport?: (apt: SourcedAirport) => void
   onSelectCorridorLine?: (route: RouteData) => void
 }
@@ -107,6 +83,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   selectedFlight,
   onSelectFlight,
   darkMode = false,
+  selectedAirport = null,
   onSelectAirport,
   onSelectCorridorLine,
 }) => {
@@ -114,7 +91,9 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const badgeMarkersRef = useRef<maplibregl.Marker[]>([])
   const planeMarkersRef = useRef<maplibregl.Marker[]>([])
+  const airportMarkersRef = useRef<maplibregl.Marker[]>([])
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('ready')
+  const [isLegendCollapsed, setIsLegendCollapsed] = useState(false)
 
   // Floating hover tooltip state
   const [hoveredRouteInfo, setHoveredRouteInfo] = useState<{
@@ -195,7 +174,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     let isMounted = true
 
     const initialWidth = mapContainerRef.current.clientWidth || window.innerWidth
-    const initialStyle = darkMode ? CARTO_DARK_MATTER_RASTER_STYLE : CARTO_POSITRON_RASTER_STYLE
+    const initialStyle = OPENSTREETMAP_RASTER_STYLE
 
     const mapOptions: maplibregl.MapOptions & { workerClass?: unknown } = {
       container: mapContainerRef.current,
@@ -298,61 +277,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         filter: ['==', ['get', 'id'], ''],
       })
 
-      // 2. Airports Source & Native MapLibre Layers
-      const airportFeatures = safeAirports.map((apt: SourcedAirport) => ({
-        type: 'Feature' as const,
-        properties: {
-          code: apt.code,
-          name: apt.name,
-          city: apt.city,
-          apix: apt.inflationScore,
-          region: apt.region,
-        },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: apt.coordinates,
-        },
-      }))
-
-      map.addSource('airports-source', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: airportFeatures,
-        },
-      })
-
-      // Airport Node Circles (Black circle, white border)
-      map.addLayer({
-        id: 'airports-circle',
-        type: 'circle',
-        source: 'airports-source',
-        paint: {
-          'circle-radius': 5,
-          'circle-color': '#1A202C',
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#FFFFFF',
-        },
-      })
-
-      // Airport Text Labels (IATA Code underneath)
-      map.addLayer({
-        id: 'airports-label',
-        type: 'symbol',
-        source: 'airports-source',
-        layout: {
-          'text-field': ['get', 'code'],
-          'text-size': 11,
-          'text-offset': [0, 1.1],
-          'text-anchor': 'top',
-        },
-        paint: {
-          'text-color': '#2D3748',
-          'text-halo-color': '#FFFFFF',
-          'text-halo-width': 1.5,
-        },
-      })
-
       // Corridor Hover & Click Interactions
       map.on('mousemove', 'corridors-line', (e: maplibregl.MapLayerMouseEvent) => {
         if (e.features && e.features[0]) {
@@ -391,27 +315,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
           }
         }
       })
-
-      // Airport Node Click & Hover Interactions
-      map.on('click', 'airports-circle', (e: maplibregl.MapLayerMouseEvent) => {
-        if (e.features && e.features[0]) {
-          const code = e.features[0].properties?.code
-          const foundAirport = safeAirports.find((a) => a.code === code)
-          if (foundAirport) {
-            onSelectAirport?.(foundAirport)
-          }
-          const connected = safeRoutes.find((r) => r.origin === code || r.destination === code)
-          if (connected) onSelectRoute(connected)
-        }
-      })
-
-      map.on('mouseenter', 'airports-circle', () => {
-        map.getCanvas().style.cursor = 'pointer'
-      })
-
-      map.on('mouseleave', 'airports-circle', () => {
-        map.getCanvas().style.cursor = ''
-      })
     })
 
     map.on('idle', () => {
@@ -421,6 +324,9 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     return () => {
       isMounted = false
       resizeObserver.disconnect()
+      badgeMarkersRef.current.forEach((m) => m.remove())
+      planeMarkersRef.current.forEach((m) => m.remove())
+      airportMarkersRef.current.forEach((m) => m.remove())
       map.remove()
       mapRef.current = null
     }
@@ -493,7 +399,13 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       const planeEl = document.createElement('div')
       planeEl.className = `group relative flex items-center justify-center rounded-full p-1.5 shadow-md cursor-pointer transition-transform duration-200 ${
         isCancelled
-          ? 'bg-red-950 text-red-400 border-2 border-red-500 ring-2 ring-red-500/50 z-20'
+          ? isSelected
+            ? darkMode
+              ? 'bg-rose-600 text-white ring-4 ring-rose-400/40 scale-125 z-30 shadow-lg'
+              : 'bg-rose-600 text-white ring-4 ring-rose-300/60 scale-125 z-30 shadow-lg'
+            : darkMode
+              ? 'bg-slate-900 text-rose-400 border border-rose-500/60 shadow-md ring-2 ring-rose-500/30 hover:scale-125 z-20'
+              : 'bg-white text-rose-600 border border-rose-200 shadow-md ring-2 ring-rose-500/20 hover:scale-125 z-20'
           : isSelected
             ? 'bg-teal-500 text-white ring-4 ring-teal-400/50 scale-125 z-30 shadow-lg'
             : isEnroute
@@ -504,11 +416,16 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                 ? 'bg-slate-900 text-teal-400 border border-teal-400/60 hover:scale-125 z-10'
                 : 'bg-white text-teal-700 border border-slate-200 shadow-md hover:scale-125 z-10'
       }`
-      planeEl.style.transform = `rotate(${fl.heading}deg)`
+      if (!isCancelled) {
+        planeEl.style.transform = `rotate(${fl.heading}deg)`
+      }
 
       if (isCancelled) {
         planeEl.innerHTML = `
-          <span class="font-extrabold text-xs leading-none text-red-500">❌</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
         `
       } else {
         planeEl.innerHTML = `
@@ -525,13 +442,15 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
           ? 'border-slate-700/80 bg-slate-900/95 text-white'
           : 'border-slate-200/90 bg-white/95 text-slate-800 shadow-lg'
       }`
-      tooltipEl.style.transform = `rotate(-${fl.heading}deg)`
+      if (!isCancelled) {
+        tooltipEl.style.transform = `rotate(-${fl.heading}deg)`
+      }
 
       const flNo = fl.flightNo || fl.flightNumber || fl.id
       if (isCancelled) {
         tooltipEl.innerHTML = `
-          <span class="font-extrabold ${darkMode ? 'text-red-400' : 'text-rose-600'}">🔴 ${flNo} • ${fl.origin} → ${fl.destination}</span>
-          <span class="font-mono ${darkMode ? 'text-red-300' : 'text-rose-500'} font-bold">Cancelled</span>
+          <span class="font-bold ${darkMode ? 'text-rose-400' : 'text-rose-600'}">${flNo} &middot; ${fl.origin} &rarr; ${fl.destination}</span>
+          <span class="font-mono text-[10px] ${darkMode ? 'text-rose-300' : 'text-rose-500'} font-semibold">Cancelled</span>
         `
       } else {
         tooltipEl.innerHTML = `
@@ -570,7 +489,49 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         planeMarkersRef.current.push(marker)
       }
     })
-  }, [filteredRoutes, viewMetric, safeFlights, selectedFlight, safeRoutes, onSelectFlight, onSelectRoute, darkMode])
+
+    // Clear previous Airport Markers
+    airportMarkersRef.current.forEach((m) => m.remove())
+    airportMarkersRef.current = []
+
+    // Plot Creative Airport Location Pins
+    safeAirports.forEach((apt) => {
+      const isSelected = selectedAirport?.code === apt.code
+      const markerEl = createCreativeAirportMarker(
+        apt,
+        isSelected,
+        Boolean(darkMode),
+        (clickedAirport) => {
+          onSelectAirport?.(clickedAirport)
+          const connected = safeRoutes.find(
+            (r) => r.origin === clickedAirport.code || r.destination === clickedAirport.code,
+          )
+          if (connected) onSelectRoute(connected)
+        },
+      )
+
+      const marker = new maplibregl.Marker({
+        element: markerEl,
+        anchor: 'bottom',
+      })
+        .setLngLat(apt.coordinates)
+        .addTo(map)
+
+      airportMarkersRef.current.push(marker)
+    })
+  }, [
+    filteredRoutes,
+    viewMetric,
+    safeFlights,
+    selectedFlight,
+    safeRoutes,
+    safeAirports,
+    selectedAirport,
+    onSelectFlight,
+    onSelectRoute,
+    onSelectAirport,
+    darkMode,
+  ])
 
   // Synchronize Map Highlight Filter & Dim non-selected routes when flight selected
   useEffect(() => {
@@ -603,135 +564,190 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden isolate bg-slate-100 dark:bg-[#030914]">
-      {/* Bottom-Left Legend Overlay */}
-      <div className="pointer-events-none absolute left-4 bottom-6 z-10 hidden sm:flex flex-col gap-1.5 rounded-2xl border border-slate-200/90 bg-white/90 p-3 text-slate-800 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 dark:text-white">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-teal-500" />
-          <span className="text-xs font-bold uppercase tracking-wider">
-            India Aviation Corridor Map
-          </span>
-        </div>
-        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-          MoSPI Baseline ({viewMetric})
-        </p>
+    <div className="relative h-full w-full overflow-hidden isolate bg-surface">
+      {/* 1. MapLibre Canvas Container (Base Layer z-0) */}
+      <div
+        ref={mapContainerRef}
+        className="map-container absolute inset-0 h-full w-full z-0"
+      />
 
-        {viewMetric === 'Average Fare' ? (
-          <div className="mt-1 flex flex-col gap-1 border-t border-slate-100 pt-1.5 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#1D4ED8]" /> High Fare (&gt;₹6.5k)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#3B82F6]" /> Medium (₹4.5k–₹6.5k)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#60A5FA]" /> Low Fare (&lt;₹4.5k)
-            </span>
-          </div>
-        ) : viewMetric === 'Volatility' ? (
-          <div className="mt-1 flex flex-col gap-1 border-t border-slate-100 pt-1.5 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#9333EA]" /> High Volatility (&gt;14%)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#F97316]" /> Medium (8–14%)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#FACC15]" /> Low (&lt;8%)
-            </span>
-          </div>
-        ) : viewMetric === 'Inflation Score' || viewMetric === 'Demand Pressure' ? (
-          <div className="mt-1 flex flex-col gap-1 border-t border-slate-100 pt-1.5 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#EA580C]" /> High Pressure (&gt;112)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#0D9488]" /> Moderate (104–112)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#06B6D4]" /> Baseline (&lt;104)
-            </span>
-          </div>
+      {/* 2. Bottom-Left Legend Overlay (Elevated with z-30, solid white bg) */}
+      <div className="pointer-events-auto absolute left-4 bottom-6 z-30 hidden sm:flex flex-col rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-white transition-all">
+        {isLegendCollapsed ? (
+          <button
+            onClick={() => setIsLegendCollapsed(false)}
+            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+            title="Expand Map Legend"
+          >
+            <Layers size={14} className="text-teal-600 dark:text-teal-400" />
+            <span>Map Legend</span>
+            <ChevronUp size={14} className="text-slate-400" />
+          </button>
         ) : (
-          <div className="mt-1 flex flex-col gap-1 border-t border-slate-100 pt-1.5 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#E53E3E]" /> Red Inflation (&gt;115)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#DD6B20]" /> Orange Rising (108–115)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#D69E2E]" /> Yellow Stable (102–108)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#38A169]" /> Green Lower (&lt;102)
-            </span>
+          <div className="p-3 sm:p-3.5 w-[230px]">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Layers size={14} className="text-teal-600 dark:text-teal-400" />
+                <div>
+                  <div className="text-xs font-bold tracking-tight text-slate-900 dark:text-white">
+                    Corridor Index
+                  </div>
+                  <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                    MoSPI Baseline ({viewMetric})
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsLegendCollapsed(true)}
+                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                title="Collapse Legend"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
+
+            {viewMetric === 'Average Fare' ? (
+              <div className="mt-2.5 flex flex-col gap-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-warn" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">High Fare</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">&gt; ₹6,500</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-rise" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Moderate</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">₹4.5k–₹6.5k</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-fall" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Low Fare</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">&lt; ₹4,500</span>
+                </div>
+              </div>
+            ) : viewMetric === 'Volatility' ? (
+              <div className="mt-2.5 flex flex-col gap-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-warn" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">High Volatility</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">&gt; 14%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-rise" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Medium</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">8%–14%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-fall" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Stable</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">&lt; 8%</span>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2.5 flex flex-col gap-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-warn" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Severe Pressure</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">&gt; 115</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-rise" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Elevated</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">108–115</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-accent" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Baseline</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">102–108</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-fall" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Discounted</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">&lt; 102</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Floating Right Zoom & Frame Controls (Matching Leakpoint template right control buttons) */}
-      <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
-        <div className="pointer-events-auto flex flex-col rounded-2xl border border-slate-200/90 bg-white/95 p-1 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95">
+      {/* 3. Floating Right Zoom & Frame Controls (Solid White BG) */}
+      <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2">
+        <div className="pointer-events-auto flex flex-col rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-800 dark:bg-slate-900">
           <button
             onClick={handleZoomIn}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white transition cursor-pointer"
             title="Zoom In"
           >
-            <ZoomIn size={17} />
+            <ZoomIn size={16} />
           </button>
           <div className="h-px w-full bg-slate-200 dark:bg-slate-800" />
           <button
             onClick={handleZoomOut}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white transition cursor-pointer"
             title="Zoom Out"
           >
-            <ZoomOut size={17} />
+            <ZoomOut size={16} />
           </button>
         </div>
 
         {/* Full-view Reset Button */}
         <button
           onClick={handleReset}
-          className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/90 bg-white/95 text-slate-700 shadow-xl backdrop-blur-md transition hover:bg-slate-100 hover:text-slate-950 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-xl transition hover:bg-slate-100 hover:text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white cursor-pointer"
           title="Fit India View"
         >
-          <RotateCcw size={16} />
+          <RotateCcw size={15} />
         </button>
       </div>
 
-      {/* Corridor Hover Tooltip Overlay */}
+      {/* 4. Corridor Hover Tooltip Overlay (Solid White BG) */}
       {hoveredRouteInfo && (
         <div
-          className={`pointer-events-none absolute z-30 min-w-[150px] rounded-xl border p-2.5 text-xs shadow-xl backdrop-blur-md transition-all ${
-            darkMode
-              ? 'border-slate-700/80 bg-slate-900/95 text-white'
-              : 'border-slate-200/90 bg-white/95 text-slate-900 shadow-lg'
-          }`}
+          className="pointer-events-none absolute z-35 min-w-[150px] rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-white transition-all"
           style={{
             left: `${hoveredRouteInfo.x + 12}px`,
             top: `${hoveredRouteInfo.y + 12}px`,
           }}
         >
-          <div className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-            {hoveredRouteInfo.route.origin} → {hoveredRouteInfo.route.destination}
+          <div className="font-bold text-slate-900 dark:text-white">
+            {hoveredRouteInfo.route.origin} &rarr; {hoveredRouteInfo.route.destination}
           </div>
           <div className="mt-1 space-y-0.5 text-[11px]">
             <div className="flex justify-between">
-              <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>APIx:</span>
-              <span className={`font-mono font-bold ${darkMode ? 'text-teal-400' : 'text-teal-700'}`}>
+              <span className="text-slate-500 dark:text-slate-400">APIx:</span>
+              <span className="font-mono font-bold text-teal-600 dark:text-teal-400">
                 {hoveredRouteInfo.route.apix.toFixed(1)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>Volatility:</span>
-              <span className={`font-mono ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <span className="text-slate-500 dark:text-slate-400">Volatility:</span>
+              <span className="font-mono text-slate-700 dark:text-slate-300">
                 {hoveredRouteInfo.route.volatility}%
               </span>
             </div>
             <div className="flex justify-between">
-              <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>Weight:</span>
-              <span className={`font-mono ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <span className="text-slate-500 dark:text-slate-400">Weight:</span>
+              <span className="font-mono text-slate-700 dark:text-slate-300">
                 {(hoveredRouteInfo.route.contribValue * 10).toFixed(1)}%
               </span>
             </div>
@@ -739,13 +755,13 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         </div>
       )}
 
-      {/* Map Initializing Loading Overlay with Animated Plane */}
+      {/* 5. Map Initializing Loading Overlay */}
       {mapStatus === 'loading' && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-50">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-teal-400 shadow-lg">
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-surface/80 backdrop-blur-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface border border-border text-accent shadow-lg">
             <RotateCcw className="animate-spin" size={18} />
           </div>
-          <p className="mt-3 text-xs font-bold uppercase tracking-wider text-slate-700">
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
             Loading aviation map...
           </p>
         </div>
@@ -753,17 +769,11 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
 
       {/* Error state */}
       {mapStatus === 'error' && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-red-50 p-4 text-red-800">
-          <AlertCircle size={24} className="mb-2 text-red-600" />
-          <p className="text-xs font-bold">Failed to load MapLibre tiles.</p>
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-warn/10 p-4 text-warn">
+          <AlertCircle size={24} className="mb-2 text-warn" />
+          <p className="text-xs font-semibold">Failed to load MapLibre tiles.</p>
         </div>
       )}
-
-      {/* MapLibre Container */}
-      <div
-        ref={mapContainerRef}
-        className="map-container absolute inset-0 h-full w-full"
-      />
     </div>
   )
 }
