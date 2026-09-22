@@ -103,3 +103,115 @@ def root() -> dict[str, object]:
 
 app.include_router(v1_router)
 app.include_router(analytics_router)
+
+# Direct aliases for prompt endpoint spec /api/flight-status & /api/airports
+from app.api.endpoints import get_flight_status, get_airports, get_corridor_intelligence, FLIGHT_STATUS_DB, AIRPORTS_DB
+
+@app.get("/api/flight-status", tags=["aviation"])
+def api_flight_status(
+    flight: str = "SG8194",
+    date: str = "today",
+):
+    return get_flight_status(flight=flight, date=date)
+
+@app.get("/api/airports", tags=["aviation"])
+def api_airports():
+    return get_airports()
+
+@app.get("/api/corridor/{origin}/{destination}", tags=["aviation"])
+def api_corridor(origin: str, destination: str):
+    return get_corridor_intelligence(origin=origin, destination=destination)
+
+# WebSocket for live aircraft updates every 5 sec
+from fastapi import WebSocket, WebSocketDisconnect
+import asyncio
+
+@app.websocket("/ws/flights")
+async def websocket_flights(websocket: WebSocket):
+    await websocket.accept()
+    logger.info("WebSocket client connected to /ws/flights")
+    try:
+        step = 0
+        while True:
+            # Interpolate plane coordinates slightly to simulate smooth flight movement
+            step += 1
+            delta = (step % 10) * 0.05
+            
+            aircraft_positions = [
+                {
+                    "id": "fl-1",
+                    "flightNo": "6E218",
+                    "flightNumber": "6E 218",
+                    "callsign": "IGO218",
+                    "airline": "IndiGo",
+                    "aircraft": "Airbus A320neo",
+                    "registration": "VT-IFK",
+                    "origin": "DEL",
+                    "destination": "BOM",
+                    "latitude": 23.4 - delta * 0.4,
+                    "longitude": 75.8 - delta * 0.3,
+                    "heading": 215,
+                    "speed": "842 km/h",
+                    "altitude": "36,000 ft",
+                    "progress": min(95, 63 + step % 30),
+                    "status": "enroute",
+                    "apix": 109.4,
+                    "cheapestFare": 4280,
+                    "volatility": 18.4,
+                },
+                {
+                    "id": "fl-2",
+                    "flightNo": "AI864",
+                    "flightNumber": "AI 864",
+                    "callsign": "AIC864",
+                    "airline": "Air India",
+                    "aircraft": "Airbus A321neo",
+                    "registration": "VT-EXQ",
+                    "origin": "DEL",
+                    "destination": "CCU",
+                    "latitude": 25.1 + delta * 0.1,
+                    "longitude": 83.2 + delta * 0.5,
+                    "heading": 115,
+                    "speed": "865 km/h",
+                    "altitude": "38,000 ft",
+                    "progress": min(95, 20 + step % 40),
+                    "status": "delayed",
+                    "delayMinutes": 45,
+                    "apix": 118.2,
+                    "cheapestFare": 5120,
+                    "volatility": 22.1,
+                },
+                {
+                    "id": "fl-4",
+                    "flightNo": "SG8194",
+                    "flightNumber": "SG 8194",
+                    "callsign": "SEJ8194",
+                    "airline": "SpiceJet",
+                    "aircraft": "Boeing 737-800",
+                    "registration": "VT-SGB",
+                    "origin": "AMD",
+                    "destination": "DEL",
+                    "latitude": 25.4,
+                    "longitude": 74.8,
+                    "heading": 25,
+                    "speed": "0 km/h",
+                    "altitude": "0 ft",
+                    "progress": 0,
+                    "status": "cancelled",
+                    "apix": 98.4,
+                    "cheapestFare": 2980,
+                    "volatility": 8.4,
+                },
+            ]
+            
+            await websocket.send_json({
+                "type": "aircraft_update",
+                "timestamp": time.time(),
+                "flights": aircraft_positions,
+            })
+            await asyncio.sleep(5)
+    except WebSocketDisconnect:
+        logger.info("WebSocket client disconnected from /ws/flights")
+    except Exception as err:
+        logger.warning("WebSocket loop ended: %s", err)
+

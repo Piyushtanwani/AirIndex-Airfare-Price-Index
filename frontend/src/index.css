@@ -187,3 +187,28 @@ input[type='range'] {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Natural MapLibre Navigation & Cursors */
+.map-container {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  overscroll-behavior: contain;
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.map-container:active {
+  cursor: grabbing;
+}
+
+.maplibregl-canvas {
+  cursor: grab !important;
+  touch-action: none !important;
+}
+
+.maplibregl-canvas:active {
+  cursor: grabbing !important;
+}
+
+

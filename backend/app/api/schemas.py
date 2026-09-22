@@ -242,3 +242,62 @@ class ContributionResponse(BaseModel):
     previous_date: dt.date
     apix_change_pct: float | None
     rows: list[ContributionRow]
+
+
+class FlightStatusOut(BaseModel):
+    flightNo: str
+    callsign: str | None = None
+    airline: str
+    aircraft: str
+    registration: str | None = "VT-SGB"
+    origin: str
+    originCity: str
+    destination: str
+    destCity: str
+    departureTime: str
+    arrivalTime: str
+    status: str
+    cancelReason: str | None = None
+    gate: str | None = "TBD"
+    terminal: str | None = "T1"
+    delayMinutes: int | None = 0
+    distanceKm: int = 750
+    progress: int = 0
+    speed: str = "0 km/h"
+    altitude: str = "0 ft"
+    heading: int = 0
+    latitude: float | None = None
+    longitude: float | None = None
+    apix: float = 100.0
+    cheapestFare: int = 4000
+    highestFare: int = 12000
+    averageFare: int = 7000
+    volatility: float = 12.0
+    trust: float = 98.4
+    updatedAt: str = "Just now"
+
+
+class AirportOut(BaseModel):
+    code: str
+    name: str
+    city: str
+    region: str
+    coordinates: list[float]
+    flightsToday: int = 42
+    averageFare: int = 5400
+    topDestinations: list[str] = Field(default_factory=list)
+    onwardConnections: list[str] = Field(default_factory=list)
+    weather: str = "28°C Clear"
+
+
+class CorridorIntelligenceOut(BaseModel):
+    origin: str
+    destination: str
+    distanceKm: int
+    flightsPerDay: int
+    averageFare: int
+    bestBookingDay: str
+    peakDemandHours: str
+    loadFactor: str
+    priceTrend: str
+

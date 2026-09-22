@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Route, Routes as RouterRoutes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes as RouterRoutes, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import Overview from './pages/Overview'
+import IntelligenceMapPage from './pages/IntelligenceMapPage'
 import RoutesPage from './pages/Routes'
 import RouteDetail from './pages/RouteDetail'
 import LeadTimes from './pages/LeadTimes'
@@ -30,7 +31,9 @@ export default function App() {
       <BrowserRouter>
         <RouterRoutes>
           <Route element={<Layout />}>
-            <Route index element={<Overview />} />
+            <Route index element={<IntelligenceMapPage />} />
+            <Route path="map" element={<Navigate to="/" replace />} />
+            <Route path="overview" element={<Overview />} />
             <Route path="routes" element={<RoutesPage />} />
             <Route path="routes/:code" element={<RouteDetail />} />
             <Route path="lead-times" element={<LeadTimes />} />
