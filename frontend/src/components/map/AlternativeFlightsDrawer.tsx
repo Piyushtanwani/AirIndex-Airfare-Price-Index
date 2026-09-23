@@ -65,20 +65,20 @@ export const AlternativeFlightsDrawer: React.FC<AlternativeFlightsDrawerProps> =
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.3 }}
+        animate={{ opacity: 0.4 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
+        className="fixed inset-0 z-[55] bg-black/40 backdrop-blur-xs"
       />
 
-      {/* Right Drawer (420px) */}
+      {/* Right Drawer (420px on desktop, full-width on mobile) */}
       <motion.aside
         initial={{ x: '100%', opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: '100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 240 }}
         aria-label="Alternative Flights Drawer"
-        className="fixed right-0 top-16 sm:top-20 z-50 flex h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] w-full max-w-[420px] flex-col overflow-y-auto border-l border-border bg-surface p-5 sm:p-6 text-text shadow-xl backdrop-blur-md sm:w-[420px] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
+        className="fixed right-0 top-0 sm:top-20 z-[60] sm:z-50 flex h-full sm:h-[calc(100vh-5rem)] w-full max-w-full sm:max-w-[420px] flex-col overflow-y-auto border-l border-border bg-surface p-4 sm:p-6 text-text shadow-2xl backdrop-blur-md sm:w-[420px] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
       >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-border pb-4">

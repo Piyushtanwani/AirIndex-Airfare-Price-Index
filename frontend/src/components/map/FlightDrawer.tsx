@@ -86,15 +86,24 @@ export const FlightDrawer: React.FC<FlightDrawerProps> = ({
 
   return (
     <AnimatePresence>
+      {/* Mobile Drawer Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.4 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-[55] bg-black/40 backdrop-blur-xs sm:hidden"
+      />
+
       <motion.aside
         initial={{ x: '-100%', opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: '-100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 240 }}
         aria-label="Flight Intelligence Drawer"
-        className="fixed left-0 top-16 sm:top-20 z-40 flex h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] w-full max-w-[430px] flex-col overflow-y-auto border-r border-border bg-surface text-text shadow-xl backdrop-blur-md [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent sm:w-[430px]"
+        className="fixed left-0 top-0 sm:top-20 z-[60] sm:z-40 flex h-full sm:h-[calc(100vh-5rem)] w-full max-w-full sm:max-w-[430px] flex-col overflow-y-auto border-r border-border bg-surface text-text shadow-2xl backdrop-blur-md [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent sm:w-[430px]"
       >
-        <div className="flex flex-col gap-5 p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-6">
           {/* 1. HEADER (Flight code, Airline pill, Status & Close) */}
           <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
             <div>
@@ -194,7 +203,7 @@ export const FlightDrawer: React.FC<FlightDrawerProps> = ({
                     </div>
                     {liveStatus?.terminal && (
                       <div className="mt-0.5 text-[11px] font-medium text-accent">
-                        Term {liveStatus.terminal} {liveStatus.gate ? `&middot; Gate ${liveStatus.gate}` : ''}
+                        Term {liveStatus.terminal} {liveStatus.gate ? `· Gate ${liveStatus.gate}` : ''}
                       </div>
                     )}
                   </div>
@@ -399,7 +408,7 @@ export const FlightDrawer: React.FC<FlightDrawerProps> = ({
           </div>
 
           {/* 4. 30-DAY APIx INDEX HISTORY CHART */}
-          <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
+          <div className="rounded-lg border border-border bg-surface p-3.5 sm:p-4 shadow-sm min-w-0">
             <div className="flex items-center justify-between pb-3">
               <div>
                 <h4 className="text-xs font-medium uppercase tracking-wide text-text-muted">

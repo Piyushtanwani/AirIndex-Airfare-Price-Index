@@ -28,22 +28,31 @@ export const CorridorBottomSheet: React.FC<CorridorBottomSheetProps> = ({
 
   return (
     <AnimatePresence>
+      {/* Mobile Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.4 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-35 bg-black/40 backdrop-blur-xs sm:hidden"
+      />
+
       <motion.div
         initial={{ y: '100%', opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: '100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-        className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-4xl rounded-t-2xl border-t border-x border-border bg-surface p-5 sm:p-6 text-text shadow-2xl backdrop-blur-md"
+        className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-4xl max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-x border-border bg-surface p-4 sm:p-6 text-text shadow-2xl backdrop-blur-md"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-alt text-accent">
-              <Navigation size={20} className="rotate-45" />
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-alt text-accent">
+              <Navigation size={18} className="rotate-45 sm:w-5 sm:h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-2xl font-semibold tracking-tight text-text">
+                <span className="font-mono text-xl sm:text-2xl font-semibold tracking-tight text-text">
                   {route.origin} &rarr; {route.destination}
                 </span>
                 <span className="inline-flex items-center rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">

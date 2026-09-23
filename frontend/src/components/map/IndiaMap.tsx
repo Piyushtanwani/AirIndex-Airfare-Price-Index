@@ -21,14 +21,14 @@ const INDIA_BOUNDS: [[number, number], [number, number]] = [
 ]
 
 const getResponsivePadding = (width: number) => {
-  if (width >= 1200) {
+  if (width >= 1100) {
     return { top: 85, left: 50, bottom: 50, right: 50 }
-  } else if (width >= 900) {
-    return { top: 80, left: 40, bottom: 40, right: 40 }
+  } else if (width >= 768) {
+    return { top: 125, left: 36, bottom: 40, right: 36 }
   } else if (width >= 600) {
-    return { top: 75, left: 30, bottom: 40, right: 30 }
+    return { top: 125, left: 24, bottom: 40, right: 24 }
   } else {
-    return { top: 85, left: 16, bottom: 80, right: 16 }
+    return { top: 125, left: 14, bottom: 45, right: 14 }
   }
 }
 
@@ -95,7 +95,9 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   const planeMarkersRef = useRef<maplibregl.Marker[]>([])
   const airportMarkersRef = useRef<maplibregl.Marker[]>([])
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('ready')
-  const [isLegendCollapsed, setIsLegendCollapsed] = useState(false)
+  const [isLegendCollapsed, setIsLegendCollapsed] = useState(() => {
+    return typeof window !== 'undefined' && window.innerWidth < 768
+  })
 
   // Floating hover tooltip state
   const [hoveredRouteInfo, setHoveredRouteInfo] = useState<{
@@ -498,10 +500,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         false, // Always false: keep map icons in light mode
         (clickedAirport) => {
           onSelectAirport?.(clickedAirport)
-          const connected = safeRoutes.find(
-            (r) => r.origin === clickedAirport.code || r.destination === clickedAirport.code,
-          )
-          if (connected) onSelectRoute(connected)
         },
       )
 
@@ -566,7 +564,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       />
 
       {/* 2. Bottom-Left Legend Overlay (Elevated with z-30, solid white bg) */}
-      <div className="pointer-events-auto absolute left-4 bottom-6 z-30 hidden sm:flex flex-col rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-white transition-all">
+      <div className="pointer-events-auto absolute left-3 sm:left-4 bottom-3 sm:bottom-6 z-30 flex flex-col rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-white transition-all max-w-[calc(100vw-1.5rem)]">
         {isLegendCollapsed ? (
           <button
             onClick={() => setIsLegendCollapsed(false)}
@@ -578,7 +576,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
             <ChevronUp size={14} className="text-slate-400" />
           </button>
         ) : (
-          <div className="p-3 sm:p-3.5 w-[230px]">
+          <div className="p-3 sm:p-3.5 w-[215px] sm:w-[230px]">
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <Layers size={14} className="text-teal-600 dark:text-teal-400" />
@@ -685,7 +683,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       </div>
 
       {/* 3. Floating Right Zoom & Frame Controls (Solid White BG) */}
-      <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2">
+      <div className="pointer-events-none absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2">
         <div className="pointer-events-auto flex flex-col rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-800 dark:bg-slate-900">
           <button
             onClick={handleZoomIn}

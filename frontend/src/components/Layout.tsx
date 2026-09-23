@@ -7,9 +7,9 @@ export function Layout() {
 
   if (isMapRoot) {
     return (
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-surface-alt">
+      <div className="flex h-screen h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-surface-alt touch-none overscroll-none">
         <Header isTransparent={true} />
-        <main className="relative flex-1 w-full h-full overflow-hidden isolate z-0">
+        <main className="relative flex-1 w-full h-full overflow-hidden touch-none">
           <Outlet />
         </main>
       </div>

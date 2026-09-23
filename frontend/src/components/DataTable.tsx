@@ -63,8 +63,8 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="w-full overflow-x-auto">
-      <table className="w-full min-w-[640px] border-collapse text-sm">
+    <div className="w-full overflow-x-auto rounded-xl border border-border bg-surface shadow-xs">
+      <table className="w-full min-w-[620px] border-collapse text-sm">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead className="bg-surface-alt/70">
           <tr className="text-left">

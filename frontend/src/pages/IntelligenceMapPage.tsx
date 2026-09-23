@@ -389,8 +389,8 @@ export const IntelligenceMapPage: React.FC = () => {
         />
       </div>
 
-      {/* FLOATING TOP-RIGHT NATIONAL KPI WIDGETS (Equal size, solid white bg, matching website UI) */}
-      <div className="pointer-events-auto absolute bottom-5 right-4 z-20 flex flex-wrap gap-2.5 sm:bottom-auto sm:top-20 sm:right-6 sm:flex-col items-end">
+      {/* FLOATING TOP-RIGHT NATIONAL KPI WIDGETS (Desktop & Tablet View) */}
+      <div className="pointer-events-auto absolute top-[125px] min-[1100px]:top-20 right-4 sm:right-6 z-20 hidden sm:flex flex-col gap-2.5 items-end">
         {/* Widget 1: National APIx */}
         <div className="flex w-44 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-md dark:border-slate-800 dark:bg-slate-900 transition-all">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-teal-200/70 bg-teal-50 text-teal-700 dark:border-teal-500/30 dark:bg-teal-500/15 dark:text-teal-400">
@@ -429,6 +429,25 @@ export const IntelligenceMapPage: React.FC = () => {
               </span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* FLOATING TOP-RIGHT NATIONAL KPI PILL (Mobile View: Compact, Sleek, Zero-Overlap) */}
+      <div className="pointer-events-auto absolute top-[122px] right-3 z-20 flex sm:hidden items-center gap-2 rounded-full border border-slate-200/90 bg-white/95 px-3 py-1.5 shadow-md backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 transition-all">
+        <div className="flex items-center gap-1.5 pr-2 border-r border-slate-200 dark:border-slate-800">
+          <TrendingUp size={13} className="text-teal-600 dark:text-teal-400" />
+          <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+            {derivedNationalStats.apix.toFixed(1)}
+          </span>
+          <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400">
+            +{derivedNationalStats.change}%
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+          <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+            {derivedNationalStats.trustScore}%
+          </span>
         </div>
       </div>
 
