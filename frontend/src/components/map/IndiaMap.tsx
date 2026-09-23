@@ -238,7 +238,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     }
 
     map.on('load', () => {
-      console.log('[IndiaMap] map.on("load") triggered');
       markReady()
       fitIndiaBounds(map)
 
@@ -246,7 +245,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       const corridorFeatures = safeRoutes
         .map((r) => generateCurvedRouteFeature(r, viewMetric))
         .filter((f): f is NonNullable<typeof f> => f !== null)
-      console.log('[IndiaMap] corridorFeatures count on load:', corridorFeatures.length, corridorFeatures[0]);
 
       map.addSource('flight-corridors', {
         type: 'geojson',
