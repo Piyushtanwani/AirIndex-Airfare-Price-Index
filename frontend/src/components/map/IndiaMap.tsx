@@ -105,12 +105,21 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   } | null>(null)
 
   const fitIndiaBounds = (targetMap: maplibregl.Map, width?: number) => {
-    const w = width || mapContainerRef.current?.clientWidth || window.innerWidth
-    targetMap.fitBounds(INDIA_BOUNDS, {
-      padding: getResponsivePadding(w),
-      duration: 0,
-      maxZoom: 6,
-    })
+    try {
+      const container = mapContainerRef.current
+      const w = width || container?.clientWidth || window.innerWidth
+      const h = container?.clientHeight || window.innerHeight
+      const padding = getResponsivePadding(w)
+      if (h > padding.top + padding.bottom + 20 && w > padding.left + padding.right + 20) {
+        targetMap.fitBounds(INDIA_BOUNDS, {
+          padding,
+          duration: 0,
+          maxZoom: 6,
+        })
+      }
+    } catch {
+      // Ignore fitBounds error when container layout is not fully measured yet
+    }
   }
 
   // Collection protection guards to eliminate runtime crashes
@@ -341,20 +350,16 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     if (!map) return
 
     // Update GeoJSON Corridors
-    console.log('[IndiaMap] 2nd useEffect: isStyleLoaded =', map.isStyleLoaded(), 'hasSource =', Boolean(map.getSource('flight-corridors')));
-    if (map.isStyleLoaded() && map.getSource('flight-corridors')) {
+    const source = map.getSource('flight-corridors') as maplibregl.GeoJSONSource | undefined
+    if (source) {
       const features = filteredRoutes
         .map((r) => generateCurvedRouteFeature(r, viewMetric))
         .filter((f): f is NonNullable<typeof f> => f !== null)
-      console.log('[IndiaMap] 2nd useEffect updating setData, count:', features.length);
 
-      const source = map.getSource('flight-corridors') as maplibregl.GeoJSONSource
-      if (source) {
-        source.setData({
-          type: 'FeatureCollection',
-          features: features,
-        })
-      }
+      source.setData({
+        type: 'FeatureCollection',
+        features: features,
+      })
     }
 
     // Clear previous APIx Badges

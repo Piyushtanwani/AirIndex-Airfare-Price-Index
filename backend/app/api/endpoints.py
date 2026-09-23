@@ -1121,11 +1121,14 @@ AIRPORTS_DB = [
 
 
 @router.get("/flight-status", response_model=schemas.FlightStatusOut, tags=["aviation"])
+@router.get("/flights/status", response_model=schemas.FlightStatusOut, tags=["aviation"])
 def get_flight_status(
-    flight: str = Query(..., description="Flight number e.g. SG8194 or 6E218"),
+    flight: str | None = Query(None, description="Flight number e.g. SG8194 or 6E218"),
+    flight_no: str | None = Query(None, description="Flight number alias e.g. SG8194 or 6E218"),
     date: str = Query("today", description="Operational date"),
 ) -> schemas.FlightStatusOut:
-    clean = flight.replace(" ", "").replace("-", "").upper()
+    raw_fl = flight or flight_no or "6E218"
+    clean = raw_fl.replace(" ", "").replace("-", "").upper()
     if clean in FLIGHT_STATUS_DB:
         return schemas.FlightStatusOut(**FLIGHT_STATUS_DB[clean])
     

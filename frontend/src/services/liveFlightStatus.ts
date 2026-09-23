@@ -136,7 +136,7 @@ export async function getTodayFlightStatus(
   if (canFetch) {
     try {
       const res = await fetch(
-        `${API_BASE_URL}/v1/flights/status?flight_no=${encodeURIComponent(cleanNo)}&date=${encodeURIComponent(date)}`,
+        `${API_BASE_URL}/v1/flight-status?flight=${encodeURIComponent(cleanNo)}&date=${encodeURIComponent(date)}`,
       )
       if (res.ok) {
         const data = await res.json()
