@@ -4,8 +4,8 @@ import type { SourcedAirport } from '../../data/airports'
 export const createCreativeAirportMarker = (
   airport: SourcedAirport,
   isSelected: boolean,
-  darkMode: boolean,
-  onClick: (airport: SourcedAirport) => void,
+  _darkMode?: boolean,
+  onClick: (airport: SourcedAirport) => void = () => {},
 ): HTMLElement => {
   const container = document.createElement('div')
   container.className = 'group relative flex flex-col items-center cursor-pointer select-none'
@@ -18,9 +18,7 @@ export const createCreativeAirportMarker = (
 
   const pinStroke = isSelected
     ? '#FFFFFF'
-    : darkMode
-      ? '#000000' // Black border in dark theme
-      : '#FFFFFF' // White border in light theme
+    : '#FFFFFF' // Always clean white border (light mode only for map icons)
 
   const innerCircleFill = isSelected
     ? '#C2410C'
@@ -65,25 +63,19 @@ export const createCreativeAirportMarker = (
       </svg>
     </div>
 
-    <!-- Attached IATA Code Badge -->
+    <!-- Attached IATA Code Badge (Always Light Mode) -->
     <div class="absolute top-[32px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-tight shadow-sm border transition-all pointer-events-none ${
       isSelected
         ? 'bg-orange-600 text-white border-orange-400 ring-2 ring-orange-400/40 z-20 scale-105'
-        : darkMode
-          ? 'bg-slate-900 text-white border-slate-700 shadow-xs group-hover:bg-teal-900/50 group-hover:text-teal-400 group-hover:border-teal-700/80'
-          : 'bg-white text-slate-900 border-slate-200 shadow-xs group-hover:bg-teal-50 group-hover:text-teal-900 group-hover:border-teal-300'
+        : 'bg-white text-slate-900 border-slate-200 shadow-xs group-hover:bg-teal-50 group-hover:text-teal-900 group-hover:border-teal-300'
     }">
       ${airport.code}
     </div>
 
-    <!-- Floating Hover Tooltip (City + IATA + Airport Name) -->
-    <div class="pointer-events-none absolute bottom-[35px] left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center rounded-xl border px-3 py-1.5 text-xs shadow-xl whitespace-nowrap z-50 backdrop-blur-md transition-all ${
-      darkMode
-        ? 'border-slate-700/80 bg-slate-900/95 text-white'
-        : 'border-slate-200/90 bg-white/95 text-slate-900 shadow-lg'
-    }">
+    <!-- Floating Hover Tooltip (City + IATA + Airport Name - Always Light Mode) -->
+    <div class="pointer-events-none absolute bottom-[35px] left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center rounded-xl border px-3 py-1.5 text-xs shadow-xl whitespace-nowrap z-50 backdrop-blur-md transition-all border-slate-200/90 bg-white/95 text-slate-900 shadow-lg">
       <div class="flex items-center gap-1.5 font-extrabold text-[12px]">
-        <span class="${darkMode ? 'text-teal-400' : 'text-teal-700'}">${airport.city}</span>
+        <span class="text-teal-700">${airport.city}</span>
         <span class="font-mono text-[10px] px-1 py-0.2 rounded bg-teal-500/15 text-teal-500">${airport.code}</span>
       </div>
       <div class="text-[10px] text-text-muted font-medium mt-0.5">${airport.name}</div>

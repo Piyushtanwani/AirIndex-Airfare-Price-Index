@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
-import MapLibreWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+maplibregl.setWorkerUrl(maplibreWorkerUrl)
 import { AIRPORTS } from '../../data/airports'
 import { generateCurvedRouteFeature } from './FlightRoute'
 import { createCreativeAirportMarker } from './AirportMarker'
@@ -82,7 +84,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   flights,
   selectedFlight,
   onSelectFlight,
-  darkMode = false,
+  darkMode: _darkMode = false,
   selectedAirport = null,
   onSelectAirport,
   onSelectCorridorLine,
@@ -176,7 +178,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     const initialWidth = mapContainerRef.current.clientWidth || window.innerWidth
     const initialStyle = OPENSTREETMAP_RASTER_STYLE
 
-    const mapOptions: maplibregl.MapOptions & { workerClass?: unknown } = {
+    const mapOptions: maplibregl.MapOptions = {
       container: mapContainerRef.current,
       style: initialStyle,
       bounds: INDIA_BOUNDS,
@@ -190,10 +192,9 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       dragRotate: true,
       touchPitch: false,
       cooperativeGestures: false,
-      workerClass: MapLibreWorker,
     }
 
-    const map = new maplibregl.Map(mapOptions as maplibregl.MapOptions)
+    const map = new maplibregl.Map(mapOptions)
     mapRef.current = map
 
     // Natural Touch & Desktop Gestures
@@ -228,6 +229,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     }
 
     map.on('load', () => {
+      console.log('[IndiaMap] map.on("load") triggered');
       markReady()
       fitIndiaBounds(map)
 
@@ -235,6 +237,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       const corridorFeatures = safeRoutes
         .map((r) => generateCurvedRouteFeature(r, viewMetric))
         .filter((f): f is NonNullable<typeof f> => f !== null)
+      console.log('[IndiaMap] corridorFeatures count on load:', corridorFeatures.length, corridorFeatures[0]);
 
       map.addSource('flight-corridors', {
         type: 'geojson',
@@ -338,10 +341,12 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     if (!map) return
 
     // Update GeoJSON Corridors
+    console.log('[IndiaMap] 2nd useEffect: isStyleLoaded =', map.isStyleLoaded(), 'hasSource =', Boolean(map.getSource('flight-corridors')));
     if (map.isStyleLoaded() && map.getSource('flight-corridors')) {
       const features = filteredRoutes
         .map((r) => generateCurvedRouteFeature(r, viewMetric))
         .filter((f): f is NonNullable<typeof f> => f !== null)
+      console.log('[IndiaMap] 2nd useEffect updating setData, count:', features.length);
 
       const source = map.getSource('flight-corridors') as maplibregl.GeoJSONSource
       if (source) {
@@ -357,6 +362,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     badgeMarkersRef.current = []
 
     // Plot Floating APIx Badges on Midpoints
+    // Plot Floating APIx Badges on Midpoints (Always Light Mode)
     filteredRoutes.forEach((route) => {
       const feat = generateCurvedRouteFeature(route, viewMetric)
       if (!feat) return
@@ -364,11 +370,8 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       const { midLng, midLat, apix, color } = feat.properties
 
       const badgeEl = document.createElement('div')
-      badgeEl.className = `flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold shadow-sm pointer-events-none transition hover:scale-105 ${
-        darkMode
-          ? 'border-slate-700/80 bg-slate-900/90 text-white'
-          : 'border-slate-200 bg-white text-slate-900'
-      }`
+      badgeEl.className =
+        'flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-900 shadow-sm pointer-events-none transition hover:scale-105'
       badgeEl.innerHTML = `
         <span class="h-1.5 w-1.5 rounded-full" style="background-color: ${color};"></span>
         <span class="font-mono">Idx ${apix.toFixed(1)}</span>
@@ -390,7 +393,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       filteredRoutes.some((r) => r.origin === fl.origin && r.destination === fl.destination),
     )
 
-    // Render FlightRadar24 Airplane Markers
+    // Render FlightRadar24 Airplane Markers (Always Light Mode)
     visibleFlights.forEach((fl) => {
       const isSelected = selectedFlight?.id === fl.id
       const isCancelled = fl.status === 'cancelled'
@@ -400,21 +403,13 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       planeEl.className = `group relative flex items-center justify-center rounded-full p-1.5 shadow-md cursor-pointer transition-transform duration-200 ${
         isCancelled
           ? isSelected
-            ? darkMode
-              ? 'bg-rose-600 text-white ring-4 ring-rose-400/40 scale-125 z-30 shadow-lg'
-              : 'bg-rose-600 text-white ring-4 ring-rose-300/60 scale-125 z-30 shadow-lg'
-            : darkMode
-              ? 'bg-slate-900 text-rose-400 border border-rose-500/60 shadow-md ring-2 ring-rose-500/30 hover:scale-125 z-20'
-              : 'bg-white text-rose-600 border border-rose-200 shadow-md ring-2 ring-rose-500/20 hover:scale-125 z-20'
+            ? 'bg-rose-600 text-white ring-4 ring-rose-300/60 scale-125 z-30 shadow-lg'
+            : 'bg-white text-rose-600 border border-rose-200 shadow-md ring-2 ring-rose-500/20 hover:scale-125 z-20'
           : isSelected
             ? 'bg-teal-500 text-white ring-4 ring-teal-400/50 scale-125 z-30 shadow-lg'
             : isEnroute
-              ? darkMode
-                ? 'bg-slate-900 text-cyan-400 border border-cyan-400/80 hover:scale-125 z-10 animate-pulse'
-                : 'bg-white text-teal-600 border border-teal-500/80 shadow-md hover:scale-125 z-10 animate-pulse'
-              : darkMode
-                ? 'bg-slate-900 text-teal-400 border border-teal-400/60 hover:scale-125 z-10'
-                : 'bg-white text-teal-700 border border-slate-200 shadow-md hover:scale-125 z-10'
+              ? 'bg-white text-teal-600 border border-teal-500/80 shadow-md hover:scale-125 z-10 animate-pulse'
+              : 'bg-white text-teal-700 border border-slate-200 shadow-md hover:scale-125 z-10'
       }`
       if (!isCancelled) {
         planeEl.style.transform = `rotate(${fl.heading}deg)`
@@ -435,13 +430,10 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         `
       }
 
-      // Airplane Hover Tooltip Card
+      // Airplane Hover Tooltip Card (Always Light Mode)
       const tooltipEl = document.createElement('div')
-      tooltipEl.className = `pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center rounded-xl border px-3 py-1.5 text-[10px] shadow-xl whitespace-nowrap z-50 backdrop-blur-md transition-all ${
-        darkMode
-          ? 'border-slate-700/80 bg-slate-900/95 text-white'
-          : 'border-slate-200/90 bg-white/95 text-slate-800 shadow-lg'
-      }`
+      tooltipEl.className =
+        'pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center rounded-xl border border-slate-200/90 bg-white/95 text-slate-800 px-3 py-1.5 text-[10px] shadow-lg whitespace-nowrap z-50 backdrop-blur-md transition-all'
       if (!isCancelled) {
         tooltipEl.style.transform = `rotate(-${fl.heading}deg)`
       }
@@ -449,13 +441,13 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       const flNo = fl.flightNo || fl.flightNumber || fl.id
       if (isCancelled) {
         tooltipEl.innerHTML = `
-          <span class="font-bold ${darkMode ? 'text-rose-400' : 'text-rose-600'}">${flNo} &middot; ${fl.origin} &rarr; ${fl.destination}</span>
-          <span class="font-mono text-[10px] ${darkMode ? 'text-rose-300' : 'text-rose-500'} font-semibold">Cancelled</span>
+          <span class="font-bold text-rose-600">${flNo} &middot; ${fl.origin} &rarr; ${fl.destination}</span>
+          <span class="font-mono text-[10px] text-rose-500 font-semibold">Cancelled</span>
         `
       } else {
         tooltipEl.innerHTML = `
-          <span class="font-extrabold ${darkMode ? 'text-teal-400' : 'text-teal-700'}">${flNo} • ${fl.origin} → ${fl.destination}</span>
-          <span class="font-mono ${darkMode ? 'text-slate-300' : 'text-slate-600'} font-medium">APIx ${fl.apix ? fl.apix.toFixed(1) : '98.4'}</span>
+          <span class="font-extrabold text-teal-700">${flNo} • ${fl.origin} → ${fl.destination}</span>
+          <span class="font-mono text-slate-600 font-medium">APIx ${fl.apix ? fl.apix.toFixed(1) : '98.4'}</span>
         `
       }
       planeEl.appendChild(tooltipEl)
@@ -494,13 +486,13 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     airportMarkersRef.current.forEach((m) => m.remove())
     airportMarkersRef.current = []
 
-    // Plot Creative Airport Location Pins
+    // Plot Creative Airport Location Pins (Always Light Mode)
     safeAirports.forEach((apt) => {
       const isSelected = selectedAirport?.code === apt.code
       const markerEl = createCreativeAirportMarker(
         apt,
         isSelected,
-        Boolean(darkMode),
+        false, // Always false: keep map icons in light mode
         (clickedAirport) => {
           onSelectAirport?.(clickedAirport)
           const connected = safeRoutes.find(
@@ -530,7 +522,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     onSelectFlight,
     onSelectRoute,
     onSelectAirport,
-    darkMode,
   ])
 
   // Synchronize Map Highlight Filter & Dim non-selected routes when flight selected
