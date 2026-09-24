@@ -20,9 +20,9 @@ export function Header({ isTransparent = false }: HeaderProps) {
 
   return (
     <header
-      className={`pointer-events-none transition-all duration-300 z-50 ${
+      className={`pointer-events-none transition-colors duration-200 z-50 ${
         isTransparent
-          ? 'absolute top-0 left-0 right-0 py-3'
+          ? 'absolute top-0 left-0 right-0 py-2.5 border-b border-transparent'
           : `sticky top-0 bg-surface/80 backdrop-blur py-2.5 ${
               scrolled ? 'border-b border-border shadow-md' : 'border-b border-transparent'
             }`

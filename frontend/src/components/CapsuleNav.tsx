@@ -53,20 +53,38 @@ export function CapsuleNav() {
   const highlightRef = useRef<HTMLDivElement | null>(null)
   const linkRefs = useRef<Map<string, HTMLAnchorElement>>(new Map())
   const [fade, setFade] = useState({ start: false, end: false })
+  const isInitialRef = useRef(true)
+  const [isReady, setIsReady] = useState(false)
 
   const active = ITEMS.find((item) => isItemActive(item, location.pathname)) ?? ITEMS[0]
 
-  const measure = useCallback(() => {
-    const scroller = scrollerRef.current
-    const highlight = highlightRef.current
-    const link = linkRefs.current.get(active.to)
-    if (!scroller || !highlight || !link) return
-    const scrollerRect = scroller.getBoundingClientRect()
-    const linkRect = link.getBoundingClientRect()
-    const x = linkRect.left - scrollerRect.left + scroller.scrollLeft
-    highlight.style.width = `${linkRect.width}px`
-    highlight.style.transform = `translateX(${x}px)`
-  }, [active.to])
+  const measure = useCallback(
+    (animate = true) => {
+      const scroller = scrollerRef.current
+      const highlight = highlightRef.current
+      const link = linkRefs.current.get(active.to)
+      if (!scroller || !highlight || !link) return
+      const scrollerRect = scroller.getBoundingClientRect()
+      const linkRect = link.getBoundingClientRect()
+      const x = linkRect.left - scrollerRect.left + scroller.scrollLeft
+
+      if (!animate || reducedMotion) {
+        highlight.style.transition = 'none'
+      } else {
+        highlight.style.transition =
+          'transform 260ms cubic-bezier(0.16, 1, 0.3, 1), width 260ms cubic-bezier(0.16, 1, 0.3, 1)'
+      }
+
+      highlight.style.width = `${linkRect.width}px`
+      highlight.style.transform = `translateX(${x}px)`
+
+      if (!animate) {
+        void highlight.offsetHeight
+        setIsReady(true)
+      }
+    },
+    [active.to, reducedMotion],
+  )
 
   const updateFade = useCallback(() => {
     const scroller = scrollerRef.current
@@ -78,37 +96,56 @@ export function CapsuleNav() {
   }, [])
 
   useLayoutEffect(() => {
-    measure()
+    if (isInitialRef.current) {
+      measure(false)
+      isInitialRef.current = false
+    } else {
+      measure(true)
+    }
   }, [measure])
 
   useEffect(() => {
+    const scroller = scrollerRef.current
     const link = linkRefs.current.get(active.to)
-    link?.scrollIntoView({
-      behavior: reducedMotion ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'center',
-    })
+    const isInitial = !isReady
+
+    // Center active link strictly within the capsule scroller itself,
+    // avoiding window-level scrollIntoView which causes page up/down/left/right shifts.
+    if (scroller && link) {
+      const scrollerRect = scroller.getBoundingClientRect()
+      const linkRect = link.getBoundingClientRect()
+      const targetLeft =
+        scroller.scrollLeft + (linkRect.left - scrollerRect.left) - (scrollerRect.width - linkRect.width) / 2
+      scroller.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: isInitial || reducedMotion ? 'auto' : 'smooth',
+      })
+    }
+
     // Re-measure once the scroll settles.
-    const id = window.setTimeout(measure, reducedMotion ? 0 : 280)
+    const id = window.setTimeout(
+      () => measure(!isInitial && !reducedMotion),
+      isInitial || reducedMotion ? 0 : 280,
+    )
     return () => window.clearTimeout(id)
-  }, [active.to, reducedMotion, measure])
+  }, [active.to, reducedMotion, measure, isReady])
 
   useEffect(() => {
     updateFade()
-    measure()
+    measure(!isInitialRef.current && !reducedMotion)
     const scroller = scrollerRef.current
     const onResize = () => {
       updateFade()
-      measure()
+      measure(false)
     }
     window.addEventListener('resize', onResize)
     scroller?.addEventListener('scroll', updateFade, { passive: true })
-    document.fonts?.ready?.then(measure).catch(() => {})
+    document.fonts?.ready?.then(() => measure(false)).catch(() => {})
     return () => {
       window.removeEventListener('resize', onResize)
       scroller?.removeEventListener('scroll', updateFade)
     }
-  }, [measure, updateFade])
+  }, [measure, updateFade, reducedMotion])
 
   return (
     <div className="relative w-full min-w-0 sm:w-auto">
@@ -131,11 +168,14 @@ export function CapsuleNav() {
         <div
           ref={highlightRef}
           aria-hidden="true"
-          className="absolute left-0 top-1.5 z-0 h-[calc(100%-0.75rem)] rounded-pill bg-accent"
+          className={`absolute left-0 top-1.5 z-0 h-[calc(100%-0.75rem)] rounded-pill bg-accent transition-opacity duration-150 ${
+            isReady ? 'opacity-100' : 'opacity-0'
+          }`}
           style={{
-            transition: reducedMotion
-              ? 'none'
-              : 'transform 260ms cubic-bezier(0.16, 1, 0.3, 1), width 260ms cubic-bezier(0.16, 1, 0.3, 1)',
+            transition:
+              isReady && !reducedMotion
+                ? 'transform 260ms cubic-bezier(0.16, 1, 0.3, 1), width 260ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease'
+                : 'none',
           }}
         />
         <nav aria-label="Primary" className="relative z-[1] flex items-center gap-0.5">
