@@ -1,79 +1,163 @@
-# AirIndex, running as four containers.
+# ==============================================================================
+# AirIndex - Production & Demonstration Multi-Container Stack
+# ==============================================================================
+# Smart India Hackathon 2026 · Problem Statement SIH26056
+# Ministry of Statistics and Programme Implementation (MoSPI) · Team VisionX
+# ==============================================================================
 #
-#   docker compose up --build
-#   docker compose exec api python cli.py demo --days 90
+# Architecture:
+#   db        - PostgreSQL 16 Alpine database with healthcheck & persistent volume
+#   api       - FastAPI application (21 endpoints, statistical engine, docs)
+#   collector - Standalone APScheduler daily collection & pipeline worker
+#   web       - React 19 dashboard served via optimized Nginx on port 5173
 #
-# Then the dashboard is at http://localhost:5173 and the API documentation at
-# http://localhost:8000/docs
+# Quick Commands:
+#   Start all:               docker compose up --build -d
+#   Generate 90-day demo:    docker compose exec api python cli.py demo --days 90
+#   View logs:               docker compose logs -f
+#   Check database status:   docker compose exec api python cli.py status
+#   Stop and clean up:       docker compose down
+#   Stop and purge volumes:  docker compose down -v
 #
-# The collector runs as its own service rather than inside the API process. A scheduler
-# living inside a web server is a surprise, and it means the two cannot be scaled or
-# restarted independently.
+# Endpoints:
+#   Dashboard:   http://localhost:5173
+#   Swagger API: http://localhost:8000/docs
+#   Methodology: http://localhost:8000/v1/methodology
+# ==============================================================================
 
 services:
+  # ----------------------------------------------------------------------------
+  # Database Service (PostgreSQL 16)
+  # ----------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
+    container_name: airindex-db
     environment:
-      POSTGRES_USER: airindex
-      POSTGRES_PASSWORD: airindex
-      POSTGRES_DB: airindex
+      POSTGRES_USER: ${POSTGRES_USER:-airindex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airindex}
+      POSTGRES_DB: ${POSTGRES_DB:-airindex}
     ports:
       - "5432:5432"
     volumes:
       - airindex-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airindex -d airindex"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-airindex} -d ${POSTGRES_DB:-airindex}"]
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - airindex-network
 
+  # ----------------------------------------------------------------------------
+  # API Service (FastAPI)
+  # ----------------------------------------------------------------------------
   api:
     build:
       context: ./backend
+      dockerfile: Dockerfile
+      args:
+        INSTALL_PLAYWRIGHT: "false"
+    container_name: airindex-api
     environment:
-      DATABASE_URL: postgresql+psycopg://airindex:airindex@db:5432/airindex
-      ENVIRONMENT: development
-      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-airindex}:${POSTGRES_PASSWORD:-airindex}@db:5432/${POSTGRES_DB:-airindex}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:80}
       SCHEDULER_ENABLED: "false"
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key-change-me}
+      READ_API_KEYS: ${READ_API_KEYS:-dev-read-key}
+      API_KEY_REQUIRED: ${API_KEY_REQUIRED:-false}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-120}
+      ANALYST_PROVIDER: ${ANALYST_PROVIDER:-auto}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-5}
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health')\""]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/v1/health || python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health')\""]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - airindex-network
 
+  # ----------------------------------------------------------------------------
+  # Collector & Scheduler Background Worker
+  # ----------------------------------------------------------------------------
   collector:
     build:
       context: ./backend
+      dockerfile: Dockerfile
+      args:
+        INSTALL_PLAYWRIGHT: "false"
+    container_name: airindex-collector
     environment:
-      DATABASE_URL: postgresql+psycopg://airindex:airindex@db:5432/airindex
-      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-airindex}:${POSTGRES_PASSWORD:-airindex}@db:5432/${POSTGRES_DB:-airindex}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       SCHEDULER_ENABLED: "true"
-      COLLECTOR_ENABLED_SOURCES: synthetic
-      # Live portal adapters stay off here too. Enabling them is a deliberate act that
-      # requires the Terms of Service review in docs/compliance.md.
-      COLLECTOR_LIVE_ADAPTERS_ENABLED: "false"
+      COLLECTOR_ENABLED_SOURCES: ${COLLECTOR_ENABLED_SOURCES:-synthetic}
+      COLLECTOR_LIVE_ADAPTERS_ENABLED: ${COLLECTOR_LIVE_ADAPTERS_ENABLED:-false}
+      COLLECTOR_REQUESTS_PER_MINUTE: ${COLLECTOR_REQUESTS_PER_MINUTE:-20}
+      COLLECTOR_MAX_REQUESTS_PER_RUN: ${COLLECTOR_MAX_REQUESTS_PER_RUN:-500}
+      COLLECTOR_RESPECT_ROBOTS: ${COLLECTOR_RESPECT_ROBOTS:-true}
+      SYNTHETIC_SEED: ${SYNTHETIC_SEED:-26056}
     depends_on:
       db:
         condition: service_healthy
+      api:
+        condition: service_healthy
     command: python -m collector.scheduler
     restart: unless-stopped
+    networks:
+      - airindex-network
 
+  # ----------------------------------------------------------------------------
+  # Web Dashboard (React 19 + Vite SPA on Nginx)
+  # ----------------------------------------------------------------------------
   web:
     build:
       context: ./frontend
-    environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+        VITE_API_KEY: ${VITE_API_KEY:-}
+    container_name: airindex-web
     ports:
-      - "5173:5173"
+      # Map host port 5173 to container port 80 (Nginx)
+      - "5173:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - airindex-network
 
+# ------------------------------------------------------------------------------
+# Persistent Storage & Network Definitions
+# ------------------------------------------------------------------------------
 volumes:
   airindex-db:
+    name: airindex-db
+
+networks:
+  airindex-network:
+    name: airindex-network
+    driver: bridge

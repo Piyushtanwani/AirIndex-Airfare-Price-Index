@@ -175,6 +175,5 @@ rings that are not clipped by the capsule's overflow.
   code splitting would fix it and has not been done.
 - There are no frontend tests. The backend suite covers the data; the interface is
   verified by walking it.
-- The Docker image runs the development server rather than serving a static build, because
-  the dashboard is not the artefact being deployed. For a real deployment, run
-  `npm run build` and serve `dist/` from any static host.
+- The Docker image uses an optimized multi-stage build (`node:20-alpine` builder and `nginx:1.27-alpine` production runtime) that serves the compiled static SPA with gzip compression, security headers, and client-side route fallback.
+

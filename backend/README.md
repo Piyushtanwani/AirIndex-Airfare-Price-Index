@@ -33,6 +33,22 @@ and prints the resulting index. It takes about two minutes and produces roughly 
 observations across 6,750 priced cells. The API is then at <http://localhost:8000> with
 interactive documentation at `/docs`.
 
+### Running with Docker
+
+Build and run the standalone backend container:
+
+```bash
+docker build -t airindex-backend .
+docker run -p 8000:8000 airindex-backend
+```
+
+To build with optional Playwright Chromium dependencies:
+```bash
+docker build --build-arg INSTALL_PLAYWRIGHT=true -t airindex-backend .
+```
+
+For the complete multi-container stack (PostgreSQL, API, Collector, Dashboard), use `docker compose up --build` from the repository root.
+
 ### Commands
 
 | Command | Does |
